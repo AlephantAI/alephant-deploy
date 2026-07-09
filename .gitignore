@@ -1,0 +1,6 @@
+# 由 generate-envs.sh 自动生成
+# 编辑 shared.env / *.env.tpl 后重新运行脚本
+*.env
+!shared.env
+!*.env.tpl
+!infra.env.example

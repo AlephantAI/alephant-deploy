@@ -38,6 +38,7 @@
 ```
 alephant-docker/
 ├── docker-compose.yml          # 主编排文件（14 个服务）
+├── generate-envs.sh            # ← 环境变量生成脚本
 │
 │   # ─── 基础设施配置 ───
 ├── infra.env.example           # PostgreSQL / ClickHouse / Valkey / Qdrant 凭证
@@ -47,14 +48,16 @@ alephant-docker/
 │   ├── clickhouse/users.d/     # ClickHouse 用户配置（1 文件）
 │   └── qdrant/production.yaml  # Qdrant 配置（单节点）
 │
-│   # ─── 各应用独立环境变量 ───
-│   # 每个文件对应 K8s 中同名的 Infisical Secret
-│   # 需从 K8s 导出真实值后填入
-├── saas-service.env            # SaaS 后端 (76 vars)
-├── policy-service.env          # 策略后端 (24 vars)
-├── ai-gateway.env              # AI 网关   (27 vars)
-├── ledge-service.env           # Ledge 服务 (56 vars)
-└── logs-collector.env          # 日志收集  (12 vars)
+│   # ─── 环境变量源文件 ───
+│   # shared.env:    跨服务公共变量（33 个，2+ 服务共用）
+│   # *.env.tpl:     各服务独有变量（合并到最终 .env 文件）
+│   # *.env:         ← 由 generate-envs.sh 自动生成, 已 gitignore
+├── shared.env                  # 公共变量：数据库/Redis/JWT/S3/邮件等
+├── saas-service.env.tpl        # SaaS 后端独有变量 (52 vars)
+├── policy-service.env.tpl      # 策略后端独有变量 (12 vars)
+├── ai-gateway.env.tpl          # AI 网关独有变量   (12 vars)
+├── ledge-service.env.tpl       # Ledge 服务独有变量 (42 vars)
+├── logs-collector.env.tpl      # 日志收集独有变量  (0 vars, 全在 shared)
 ```
 
 ## 环境变量体系
@@ -120,26 +123,48 @@ cp infra.env.example infra.env
 vim infra.env   # 填入 PostgreSQL / ClickHouse / Valkey / Qdrant 密码
 ```
 
-### 2. 从 K8s 导出应用环境变量
+### 2. 生成环境变量文件
 
-每个应用有自己的 Infisical Secret，用此命令批量导出（需要 `jq`）：
+**自动方式（推荐）** — 从 K8s Infisical Secret 导出后拆分：
 
 ```bash
 # 先确认 K8s 命名空间
 NS=alephant-prod
 KF=--kubeconfig=<你的kubeconfig路径>
 
-# 导出所有应用 env 文件
+# 导出所有 Secret 到临时目录
+mkdir -p /tmp/alephant-secrets
 for secret in saas-service policy-service ai-gateway ledge-service logs-collector; do
   kubectl $KF -n $NS get secret alephant-$secret-infisical-secrets -o json \
     | jq -r '.data | to_entries[] | "\(.key)=\(.value | @base64d)"' \
-    > $secret.env
+    > /tmp/alephant-secrets/$secret.env
 done
 ```
 
-> ⚠️ 注意：导出后需要编辑生成的 env 文件，将数据库连接地址从 K8s 内部 DNS（`alephant-prod-postgresql-rw`）改为 Compose 服务名（`postgres`），同理 ClickHouse/Valkey/Qdrant 地址。
+然后将各服务的数据库/Redis 地址从 K8s 内部 DNS 改为 Docker 服务名，再手动将重复变量提取到 `shared.env`、独有变量保留在 `*.env.tpl`。
 
-### 3. 准备镜像
+**手动方式** — 直接编辑模板文件：
+
+```bash
+# 编辑公共变量（33 个跨服务共享变量）
+vim shared.env     # 填入 db/redis/JWT/S3/邮件等公共值
+
+# 编辑各服务独有变量
+vim saas-service.env.tpl
+vim policy-service.env.tpl
+vim ai-gateway.env.tpl
+vim ledge-service.env.tpl
+```
+
+### 3. 生成最终环境变量文件
+
+```bash
+./generate-envs.sh
+```
+
+此命令将 `shared.env` 与各 `*.env.tpl` 合并，生成最终的 `*.env` 文件供 docker compose 使用。
+
+### 4. 准备镜像
 
 ```bash
 # 拉取原仓库镜像
@@ -163,7 +188,7 @@ export SAAS_SERVICE_IMAGE=your-registry/alephantai-saas-service:latest
 # ...
 ```
 
-### 4. 启动
+### 5. 启动
 
 ```bash
 # 启动全部服务
