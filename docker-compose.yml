@@ -153,7 +153,7 @@ services:
     env_file:
       - infra.env
     environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+            QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
       interval: 10s
