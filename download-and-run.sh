@@ -12,7 +12,7 @@
 #   ./download-and-run.sh
 #
 # 该脚本会:
-#   1. 从 https://image-exports.alephant.io/alephant/ 下载 6 个业务镜像
+#   1. 从 https://image-exports.alephant.io/alephant/ 下载 5 个业务镜像
 #   2. docker load 加载到本地
 #   3. docker compose up -d 启动全部服务
 # =============================================================================
@@ -25,13 +25,12 @@ COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 需要下载的镜像（模块名 / 文件名）
 # 格式: MODULES[i] 对应 FILES[i]
-MODULES=(app saas-service policy-service ai-gateway ledge-service logs-collector)
+MODULES=(app saas-service policy-service ai-gateway logs-collector)
 FILES=(
   "alephantai-app-20260613081608.tar"
   "alephantai-saas-service-20260629121515.tar"
   "alephantai-policy-service-20260613220845.tar"
   "alephantai-ai-gateway-20260629120913.tar"
-  "alephantai-ledge-service-20260629153650.tar"
   "alephantai-logs-collector-20260618231935.tar"
 )
 
@@ -73,7 +72,7 @@ check_prereqs() {
 
   # 检查是否已有 .env 文件（提醒但没有 .env 也可以继续，compose 会报更具体错误）
   local MISSING=0
-  for svc in saas-service policy-service ai-gateway ledge-service logs-collector; do
+  for svc in saas-service policy-service ai-gateway logs-collector; do
     if [ ! -f "${COMPOSE_DIR}/${svc}.env" ]; then
       warn "缺少 ${svc}.env — 请运行 ./generate-envs.sh 生成"
       MISSING=1

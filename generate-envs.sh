@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-SERVICES=("saas-service" "policy-service" "ai-gateway" "ledge-service" "logs-collector")
+SERVICES=("saas-service" "policy-service" "ai-gateway" "logs-collector")
 
 echo "=== Alephant 环境变量生成工具 ==="
 echo ""

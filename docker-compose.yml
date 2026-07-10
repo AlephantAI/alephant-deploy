@@ -14,7 +14,6 @@
 #   saas-service.env → SaaS 后端 (76 vars, 源自 Infisical)
 #   policy-service.env → 策略后端 (24 vars)
 #   ai-gateway.env    → AI 网关 (27 vars)
-#   ledge-service.env → Ledge 服务 (56 vars)
 #   logs-collector.env → 日志收集 (12 vars)
 # =============================================================================
 
@@ -187,7 +186,6 @@ services:
       - saas-service
       - policy-service
       - ai-gateway
-      - ledge-service
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
@@ -290,33 +288,6 @@ services:
         reservations:
           cpus: "0.2"
           memory: 256M
-
-  # ---------------------------------------------------------------------------
-  # Ledge Service
-  # ---------------------------------------------------------------------------
-  ledge-service:
-    image: ${LEDGE_SERVICE_IMAGE:-registry.digitalocean.com/wechart/alephantai-ledge-service:20260629153650}
-    container_name: alephant-ledge-service
-    restart: unless-stopped
-    networks:
-      - alephant-net
-    ports:
-      - "127.0.0.1:8091:8080"
-    env_file:
-      - ledge-service.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      valkey:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
 
   # ---------------------------------------------------------------------------
   # Logs Collector
