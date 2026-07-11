@@ -10,13 +10,11 @@
 #   3. docker compose up -d
 #
 # 环境变量体系:
-#   infra.env        → PostgreSQL / ClickHouse / Valkey / Qdrant / MinIO 凭证
+#   infra.env        → PostgreSQL / ClickHouse / Valkey / Qdrant 凭证
 #   saas-service.env → SaaS 后端 (76 vars, 源自 Infisical)
 #   policy-service.env → 策略后端 (24 vars)
-#   ai-gateway.env    → AI 网关 (29 vars, 含 TiKV)
+#   ai-gateway.env    → AI 网关 (27 vars)
 #   logs-collector.env → 日志收集 (12 vars)
-#
-# 服务总数: 12 (含 pd + tikv + minio)
 # =============================================================================
 
 networks:
@@ -79,18 +77,18 @@ services:
   # ClickHouse (OLAP 数据库)
   # ---------------------------------------------------------------------------
   clickhouse:
-    image: clickhouse/clickhouse-server:24.3
+    image: clickhouse/clickhouse-server:24.8
     container_name: alephant-clickhouse
     restart: unless-stopped
     networks:
       - alephant-net
-    ports:
-      - "127.0.0.1:8123:8123"   # HTTP 接口
-      - "127.0.0.1:9000:9000"   # 原生 TCP
+    # ports:
+    #   - "127.0.0.1:8123:8123"   # HTTP 接口
+    #   - "127.0.0.1:9000:9000"   # 原生 TCP
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
-      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d
+      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d:ro
     env_file:
       - infra.env
     environment:
@@ -175,7 +173,6 @@ services:
         reservations:
           cpus: "0.25"
           memory: 512M
-
   # ---------------------------------------------------------------------------
   # PD (Placement Driver — TiKV 集群管理)
   # ---------------------------------------------------------------------------
@@ -296,6 +293,11 @@ services:
       - "80:80"   # 建议在上游部署 SSL 反向代理
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    
+
+  # ---------------------------------------------------------------------------
+  # SaaS 后端
+  # ---------------------------------------------------------------------------
   saas-service:
     image: ${SAAS_SERVICE_IMAGE:-registry.digitalocean.com/wechart/alephantai-saas-service:20260629121515}
     container_name: alephant-saas-service
@@ -306,6 +308,10 @@ services:
       - "127.0.0.1:8081:8080"
     env_file:
       - saas-service.env
+
+  # ---------------------------------------------------------------------------
+  # 策略后端
+  # ---------------------------------------------------------------------------
   policy-service:
     image: ${POLICY_SERVICE_IMAGE:-registry.digitalocean.com/wechart/alephantai-policy-service:20260613220845}
     container_name: alephant-policy-service
@@ -316,6 +322,10 @@ services:
       - "127.0.0.1:8090:8090"
     env_file:
       - policy-service.env
+
+  # ---------------------------------------------------------------------------
+  # AI Gateway
+  # ---------------------------------------------------------------------------
   ai-gateway:
     depends_on:
       - pd
@@ -330,6 +340,10 @@ services:
       - "127.0.0.1:8080:8080"
     env_file:
       - ai-gateway.env
+
+  # ---------------------------------------------------------------------------
+  # Logs Collector
+  # ---------------------------------------------------------------------------
   logs-collector:
     image: ${LOGS_COLLECTOR_IMAGE:-registry.digitalocean.com/wechart/alephantai-logs-collector:20260618231935}
     container_name: alephant-logs-collector
