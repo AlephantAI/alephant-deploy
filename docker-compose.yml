@@ -276,14 +276,16 @@ services:
           memory: 512M
 
   # ---------------------------------------------------------------------------
-  # SaaS 前端 (Nginx SPA)
-  # 注意: 如需统一 API 路由，建议在 nginx.conf 中添加 reverse proxy 配置
+  # SaaS 前端 + API 反向代理 (Nginx)
+  # nginx.conf 包含多域名 server 块和子路径 reverse proxy，
+  # 将 /api/v1 → saas-service, /v1 → ai-gateway, /v1/log → logs-collector 等
   # ---------------------------------------------------------------------------
   saas-app:
     depends_on:
       - saas-service
       - policy-service
       - ai-gateway
+      - logs-collector
     image: ${APP_IMAGE:-registry.digitalocean.com/wechart/alephantai-app:20260613081608}
     container_name: alephant-app
     restart: unless-stopped
