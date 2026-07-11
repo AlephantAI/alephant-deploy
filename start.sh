@@ -20,7 +20,7 @@ err()   { echo -e "${RED}[ERROR]${NC} $*"; }
 # ─── 密码/密钥生成 ──────────────────────────────────────────────────────────
 gen_pswd() { openssl rand -base64 32 | tr -d '/+=' | cut -c1-24; }
 gen_jwt()  { openssl rand -base64 48 | tr -d '/+='; }
-gen_key()  { openssl rand -hex 32; }
+gen_key()  { openssl rand -base64 32; }
 gen_token(){ openssl rand -base64 32; }
 gen_stripe(){ echo "sk_test_$(openssl rand -hex 32)"; }
 
@@ -127,25 +127,6 @@ ENFORCE_TRIAL_ONCE_PER_USER=false
 AUTH_RATE_LIMIT_PER_MIN=60
 SALES_LEAD_EMAIL=admin@example.com
 
-# Stripe (placeholder — 替换为真实密钥)
-STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-STRIPE_PRICE_PRO_MONTHLY=price_pro_monthly
-STRIPE_PRICE_PRO_YEARLY=price_pro_yearly
-STRIPE_PRICE_TEAM_MONTHLY=price_team_monthly
-STRIPE_PRICE_TEAM_YEARLY=price_team_yearly
-STRIPE_PRICE_ENTERPRISE_MONTHLY=price_enterprise_monthly
-STRIPE_PRICE_ENTERPRISE_YEARLY=price_enterprise_yearly
-STRIPE_PRICE_EXTRA_VK=price_extra_vk
-STRIPE_PRICE_LOG_PACK_PRO=price_log_pro
-STRIPE_PRICE_LOG_PACK_TEAM=price_log_team
-STRIPE_PRICE_LOG_PACK_ENTERPRISE=price_log_enterprise
-STRIPE_METER_EVENT_LOG_PACK_PRO=log_pack_pro
-STRIPE_METER_EVENT_LOG_PACK_TEAM=log_pack_team
-STRIPE_METER_EVENT_LOG_PACK_ENTERPRISE=log_pack_enterprise
-LOG_OVERAGE_E2E_METER_EVENT_NAME=
-LOG_OVERAGE_E2E_REAL_STRIPE=false
-LOG_OVERAGE_E2E_STRIPE_CUSTOMER_ID=
 
 # OAuth (placeholder)
 OAUTH_GITHUB_CLIENT_ID=
@@ -255,6 +236,7 @@ ENCRYPTION_KEY=${ENCRYPTION_KEY}
 MASTER_KEY_ENCRYPTION_KEY=${MASTER_KEY_ENCRYPTION_KEY}
 PAYMENT_SERVICE_KEY=${PAYMENT_SERVICE_KEY}
 LOGS_COLLECTOR_X402_HTTP_AUTH_TOKEN=${LOGS_COLLECTOR_X402_HTTP_AUTH_TOKEN}
+KEY_MARKET_API_KEY_HASH_SECRET=${MASTER_KEY_ENCRYPTION_KEY}
 ANALYTICS_RMT_MAX_RANGE_HOURS=72
 EOF
 

@@ -10,13 +10,11 @@
 #   3. docker compose up -d
 #
 # 环境变量体系:
-#   infra.env        → PostgreSQL / ClickHouse / Valkey / Qdrant / MinIO 凭证
+#   infra.env        → PostgreSQL / ClickHouse / Valkey / Qdrant 凭证
 #   saas-service.env → SaaS 后端 (76 vars, 源自 Infisical)
 #   policy-service.env → 策略后端 (24 vars)
-#   ai-gateway.env    → AI 网关 (29 vars, 含 TiKV)
+#   ai-gateway.env    → AI 网关 (27 vars)
 #   logs-collector.env → 日志收集 (12 vars)
-#
-# 服务总数: 12 (含 pd + tikv + minio)
 # =============================================================================
 
 networks:
@@ -31,12 +29,6 @@ volumes:
   valkey-data:
     driver: local
   qdrant-storage:
-    driver: local
-  pd-data:
-    driver: local
-  tikv-data:
-    driver: local
-  minio-data:
     driver: local
 
 # =============================================================================
@@ -79,18 +71,18 @@ services:
   # ClickHouse (OLAP 数据库)
   # ---------------------------------------------------------------------------
   clickhouse:
-    image: clickhouse/clickhouse-server:24.3
+    image: clickhouse/clickhouse-server:24.8
     container_name: alephant-clickhouse
     restart: unless-stopped
     networks:
       - alephant-net
-    ports:
-      - "127.0.0.1:8123:8123"   # HTTP 接口
-      - "127.0.0.1:9000:9000"   # 原生 TCP
+    # ports:
+    #   - "127.0.0.1:8123:8123"   # HTTP 接口
+    #   - "127.0.0.1:9000:9000"   # 原生 TCP
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
-      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d
+      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d:ro
     env_file:
       - infra.env
     environment:
@@ -177,116 +169,10 @@ services:
           memory: 512M
 
   # ---------------------------------------------------------------------------
-  # PD (Placement Driver — TiKV 集群管理)
-  # ---------------------------------------------------------------------------
-  pd:
-    image: pingcap/pd:v7.5.0
-    container_name: alephant-pd
-    restart: unless-stopped
-    networks:
-      - alephant-net
-    ports:
-      - "127.0.0.1:2379:2379"
-    volumes:
-      - pd-data:/data/pd
-    command:
-      - --name=pd
-      - --data-dir=/data/pd
-      - --client-urls=http://0.0.0.0:2379
-      - --peer-urls=http://0.0.0.0:2380
-      - --advertise-client-urls=http://pd:2379
-      - --advertise-peer-urls=http://pd:2380
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:2379/pd/api/v1/version"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
-
-  # ---------------------------------------------------------------------------
-  # TiKV (分布式 KV 存储)
-  # ---------------------------------------------------------------------------
-  tikv:
-    image: pingcap/tikv:v7.5.0
-    container_name: alephant-tikv
-    restart: unless-stopped
-    networks:
-      - alephant-net
-    ports:
-      - "127.0.0.1:20160:20160"
-    volumes:
-      - tikv-data:/data/tikv
-    command:
-      - --pd-endpoints=pd:2379
-      - --data-dir=/data/tikv
-      - --advertise-addr=tikv:20160
-    depends_on:
-      pd:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:20160/status"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 2G
-        reservations:
-          cpus: "0.5"
-          memory: 1G
-
-  # ---------------------------------------------------------------------------
-  # MinIO (S3 兼容对象存储)
-  # ---------------------------------------------------------------------------
-  minio:
-    image: pgsty/minio:latest
-    container_name: alephant-minio
-    restart: unless-stopped
-    networks:
-      - alephant-net
-    ports:
-      - "127.0.0.1:9000:9000"   # S3 API
-      - "127.0.0.1:9001:9001"   # Console UI
-    volumes:
-      - minio-data:/data
-    env_file:
-      - infra.env
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address :9001
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
-          memory: 512M
-
-  # ---------------------------------------------------------------------------
   # SaaS 前端 (Nginx SPA)
   # 注意: 如需统一 API 路由，建议在 nginx.conf 中添加 reverse proxy 配置
   # ---------------------------------------------------------------------------
   saas-app:
-    depends_on:
-      - saas-service
-      - policy-service
-      - ai-gateway
     image: ${APP_IMAGE:-registry.digitalocean.com/wechart/alephantai-app:20260613081608}
     container_name: alephant-app
     restart: unless-stopped
@@ -296,6 +182,27 @@ services:
       - "80:80"   # 建议在上游部署 SSL 反向代理
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - saas-service
+      - policy-service
+      - ai-gateway
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # SaaS 后端
+  # ---------------------------------------------------------------------------
   saas-service:
     image: ${SAAS_SERVICE_IMAGE:-registry.digitalocean.com/wechart/alephantai-saas-service:20260629121515}
     container_name: alephant-saas-service
@@ -306,6 +213,27 @@ services:
       - "127.0.0.1:8081:8080"
     env_file:
       - saas-service.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+        reservations:
+          cpus: "0.2"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # 策略后端
+  # ---------------------------------------------------------------------------
   policy-service:
     image: ${POLICY_SERVICE_IMAGE:-registry.digitalocean.com/wechart/alephantai-policy-service:20260613220845}
     container_name: alephant-policy-service
@@ -316,11 +244,26 @@ services:
       - "127.0.0.1:8090:8090"
     env_file:
       - policy-service.env
-  ai-gateway:
     depends_on:
-      - pd
-      - tikv
-      - minio
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+        reservations:
+          cpus: "0.2"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # AI Gateway
+  # ---------------------------------------------------------------------------
+  ai-gateway:
     image: ${AI_GATEWAY_IMAGE:-registry.digitalocean.com/wechart/alephantai-ai-gateway:20260629120913}
     container_name: alephant-ai-gateway
     restart: unless-stopped
@@ -330,6 +273,25 @@ services:
       - "127.0.0.1:8080:8080"
     env_file:
       - ai-gateway.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Logs Collector
+  # ---------------------------------------------------------------------------
   logs-collector:
     image: ${LOGS_COLLECTOR_IMAGE:-registry.digitalocean.com/wechart/alephantai-logs-collector:20260618231935}
     container_name: alephant-logs-collector
@@ -340,3 +302,61 @@ services:
       - "127.0.0.1:8585:8585"
     env_file:
       - logs-collector.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1G
+        reservations:
+          cpus: "0.1"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Postgres Exporter (监控)
+  # ---------------------------------------------------------------------------
+  # postgres-exporter:
+  #   image: prometheuscommunity/postgres-exporter:v0.15.0
+  #   container_name: alephant-postgres-exporter
+  #   restart: unless-stopped
+  #   networks:
+  #     - alephant-net
+  #   ports:
+  #     - "127.0.0.1:9187:9187"
+  #   environment:
+  #     DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-alephant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alephant}?sslmode=disable"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: "0.1"
+  #         memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # Valkey Exporter (监控)
+  # ---------------------------------------------------------------------------
+  # valkey-exporter:
+  #   image: oliver006/redis_exporter:v1.58.0
+  #   container_name: alephant-valkey-exporter
+  #   restart: unless-stopped
+  #   networks:
+  #     - alephant-net
+  #   ports:
+  #     - "127.0.0.1:9121:9121"
+  #   environment:
+  #     REDIS_ADDR: "redis://valkey:6379"
+  #     REDIS_PASSWORD: ${VALKEY_PASSWORD}
+  #   depends_on:
+  #     valkey:
+  #       condition: service_healthy
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: "0.1"
+  #         memory: 64M
