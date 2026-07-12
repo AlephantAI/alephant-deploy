@@ -1,0 +1,47 @@
+# =============================================================================
+# Alephant — MinIO S3 兼容对象存储 部署配置
+# =============================================================================
+# Chart: bitnami/minio (Bitnami 官方 Chart)
+#
+# ⚠️ Docker Compose 中使用的是 pgsty/minio:latest 自定义镜像。
+#    如果使用 bitnami/minio，环境变量和默认配置可能有差异。
+#    如需完全一致，可改用 docker-compose 中的 pgsty/minio 镜像：
+#       image.repository: pgsty/minio
+#       image.tag: latest
+#       image.registry: ""
+#
+# 用法:
+#   helm repo add bitnami https://charts.bitnami.com/bitnami
+#   helm upgrade --install alephant-minio bitnami/minio \
+#     --namespace alephant-prod \
+#     --create-namespace \
+#     -f middlewares/minio.values.yaml
+#
+# 生产环境建议启用 mode: distributed 和 ≥4 节点。
+# =============================================================================
+
+mode: standalone
+
+auth:
+  rootUser: admin
+  rootPassword: "CHANGE_ME"               # ← 务必替换
+
+defaultBuckets: alephant
+
+persistence:
+  enabled: true
+  storageClass: alicloud-disk-essd        # ← 按你的集群存储类修改
+  size: 50Gi
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+service:
+  ports:
+    api: 9000
+    console: 9001

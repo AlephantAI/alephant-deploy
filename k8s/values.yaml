@@ -13,6 +13,11 @@ app:
     repository: alephantai-app
     tag: 20260712195934
   spa: true
+  # tolerations:                           # 按需取消注释
+  #   - key: dedicated
+  #     operator: Equal
+  #     value: prod
+  #     effect: NoSchedule
   service:
     enabled: true
     port: 80
@@ -26,6 +31,11 @@ saasService:
   image:
     repository: alephantai-saas-service
     tag: 20260712195945
+  # tolerations:
+  #   - key: dedicated
+  #     operator: Equal
+  #     value: prod
+  #     effect: NoSchedule
   envFrom:
     - secretRef:
         name: alephant-saas-service-secrets
@@ -64,6 +74,11 @@ policyService:
   image:
     repository: alephantai-policy-service
     tag: 20260712195949
+  # tolerations:
+  #   - key: dedicated
+  #     operator: Equal
+  #     value: prod
+  #     effect: NoSchedule
   envFrom:
     - secretRef:
         name: alephant-policy-service-secrets
@@ -86,6 +101,11 @@ aiGateway:
   image:
     repository: alephantai-ai-gateway
     tag: 20260712194908
+  # tolerations:
+  #   - key: dedicated
+  #     operator: Equal
+  #     value: prod
+  #     effect: NoSchedule
   envFrom:
     - secretRef:
         name: alephant-ai-gateway-secrets
@@ -102,6 +122,11 @@ logsCollector:
   image:
     repository: alephantai-logs-collector
     tag: 20260712195944
+  # tolerations:
+  #   - key: dedicated
+  #     operator: Equal
+  #     value: prod
+  #     effect: NoSchedule
   envFrom:
     - secretRef:
         name: alephant-logs-collector-secrets

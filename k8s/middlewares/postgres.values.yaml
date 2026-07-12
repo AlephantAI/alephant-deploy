@@ -1,0 +1,40 @@
+# =============================================================================
+# Alephant — PostgreSQL 部署配置
+# =============================================================================
+# Chart: weconomy/cnpg-cluster (内部 Chart)
+# 用法:
+#   helm upgrade --install alephant-postgres weconomy/cnpg-cluster \
+#     --version 0.1.16 \
+#     --namespace alephant-prod \
+#     --create-namespace \
+#     -f middlewares/postgres.values.yaml
+# =============================================================================
+
+instances: 2
+
+image:
+  repository: ghcr.io/cloudnative-pg/postgresql
+  tag: "17.5"
+
+postgresql:
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+bootstrap:
+  initdb:
+    database: alephant
+    owner: alephant
+
+storage:
+  storageClass: alicloud-disk-essd    # ← 按你的集群存储类修改
+  size: 50Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+enablePDB: true

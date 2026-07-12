@@ -52,15 +52,6 @@ Alephant 私有化部署需要有效的 License 文件进行授权验证。
 
 1. 联系 Alephant 团队获取 `license.jwt` 文件
 2. 将文件内容复制到 `license/license.jwt`：
-
-```bash
-# 将获取到的 JWT 内容写入文件
-cat > license/license.jwt << 'EOF'
-eyJhbGciOiJSUzI1NiIs...
-...
-EOF
-```
-
 3. 设置工作空间拥有者邮箱（**必填**），在 `infra.env` 或启动前 export：
 
 ```bash

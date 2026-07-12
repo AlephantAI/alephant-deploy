@@ -1,0 +1,44 @@
+# =============================================================================
+# Alephant — Valkey (Redis 兼容) 部署配置
+# =============================================================================
+# Chart: valkey/valkey (官方 Chart)
+# 用法:
+#   helm repo add valkey https://valkey.io/valkey-helm/
+#   helm upgrade --install alephant-valkey valkey/valkey \
+#     --version 0.9.4 \
+#     --namespace alephant-prod \
+#     --create-namespace \
+#     -f middlewares/valkey.values.yaml
+# =============================================================================
+
+replica:
+  enabled: true
+  replicas: 0
+  persistence:
+    size: 50Gi
+    storageClass: alicloud-disk-essd
+
+dataStorage:
+  enabled: true
+  requestedSize: 50Gi
+  className: alicloud-disk-essd
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 4Gi
+
+auth:
+  enabled: true
+  aclUsers:
+    default:
+      permissions: "~* &* +@all"
+      password: "CHANGE_ME"                # ← 务必替换
+  replicationUser: "default"
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1

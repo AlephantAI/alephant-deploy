@@ -2,11 +2,11 @@
 
 ## 目录
 
-- [架构概览](#架构概览)
 - [前置依赖](#前置依赖)
 - [快速开始](#快速开始)
 - [组件说明](#组件说明)
 - [基础设施依赖](#基础设施依赖)
+- [基础设施部署参考](#基础设施部署参考)
 - [Secrets 管理](#secrets-管理)
 - [License 激活](#license-激活)
 - [Ingress 路由](#ingress-路由)
@@ -66,23 +66,23 @@
 
 | 中间件 | 部署方式示例 | 备注 |
 |---|---|---|
-| **PostgreSQL** | [CNPG Operator](https://cloudnative-pg.io/) | 参见 `../cnpg-cluster/` |
-| **ClickHouse** | [Altinity Operator](https://github.com/Altinity/clickhouse-operator) 或手工 StatefulSet | 参见 `../alephant/clickhouse-no-keeper-chi.yaml` |
-| **Valkey / Redis** | 社区 Helm Chart (bitnami/valkey) | |
+| **PostgreSQL** | [CNPG Operator](https://cloudnative-pg.io/) | 使用内部 `cnpg-cluster` chart |
+| **ClickHouse** | [Altinity Operator](https://github.com/Altinity/clickhouse-operator) | 使用内部 `clickhouse-cluster` chart |
+| **Valkey / Redis** | 官方 Helm Chart (valkey/valkey) | |
 | **Qdrant** | 官方 Helm Chart (qdrant/qdrant) | |
-| **TiKV + PD** | 手工 StatefulSet 或 TiDB Operator | |
-| **MinIO** | 官方 Operator (minio-operator) 或 Helm Chart | |
+| **TiKV + PD** | TiDB Operator 或手工 StatefulSet | 参见 `../alephantai-tikv.yaml` |
+| **MinIO** | Bitnami Helm Chart (bitnami/minio) | |
 
 ### 网络连通性
 
 各业务服务通过 **K8s Service DNS** 访问基础设施，例如：
 
-- PostgreSQL: `postgres-cluster-rw.alephant-infra.svc.cluster.local:5432`
-- ClickHouse: `clickhouse.alephant-infra.svc.cluster.local:8123`
-- Valkey: `valkey.alephant-infra.svc.cluster.local:6379`
-- Qdrant: `qdrant.alephant-infra.svc.cluster.local:6333`
-- PD: `pd.alephant-infra.svc.cluster.local:2379`
-- MinIO: `minio.alephant-infra.svc.cluster.local:9000`
+- PostgreSQL: `alephant-postgres-rw.alephant-prod.svc.cluster.local:5432`
+- ClickHouse: `ch-clickhouse.alephant-prod.svc.cluster.local:8123`
+- Valkey: `alephant-valkey.alephant-prod.svc.cluster.local:6379`
+- Qdrant: `alephant-prod-qdrant.alephant-prod.svc.cluster.local:6333`
+- PD: `pd.alephant-prod.svc.cluster.local:2379`
+- MinIO: `alephant-minio.alephant-prod.svc.cluster.local:9000`
 
 ---
 
@@ -103,11 +103,23 @@ helm upgrade --install alephant-prod weconomy/common \
   -f values.yaml
 ```
 
-### 2. 设置环境变量
+### 2. 创建 Secrets
+
+业务服务的环境变量通过 K8s Secret 注入。部署前需要创建以下 4 个 Secret：
 
 ```bash
-// TODO
+# 创建 saasService 环境变量 Secret
+kubectl create secret generic alephant-saas-service-secrets \
+  --from-literal=DATABASE_URL=postgresql://alephant:xxx@alephant-postgres-rw:5432/alephant \
+  --from-literal=REDIS_URL=redis://default:xxx@alephant-valkey:6379/0 \
+  --from-literal=JWT_SECRET=xxx \
+  --from-literal=MASTER_KEY=xxx \
+  --namespace alephant-prod
+
+# 其他服务的 Secret 同理，见下方 Secrets 管理章节
 ```
+
+> 各 Secret 所需的完整环境变量列表，参考 Docker Compose 的对应 `.env` 文件（`saas-service.env`、`policy-service.env`、`ai-gateway.env`、`logs-collector.env`），或由 Infisical / External Secrets Operator 自动同步。
 
 ### 3. （可选）启用 Ingress
 
@@ -125,7 +137,7 @@ kubectl get svc -n alephant-prod
 
 ## 基础设施依赖
 
-业务服务依赖以下基础设施，其连接信息通过 **Infisical Secrets** 注入（即 `alephant-*-infisical-secrets` 这些 Secret）：
+业务服务依赖以下基础设施，其连接信息通过 Secret 注入到各服务的环境变量中：
 
 | 依赖 | 用途 | 被哪些服务使用 |
 |---|---|---|
@@ -136,7 +148,135 @@ kubectl get svc -n alephant-prod
 | **TiKV + PD** | 分布式 KV 存储 (AI 网关持久化) | aiGateway |
 | **MinIO** | S3 兼容对象存储 (文件、模型数据) | aiGateway |
 
-这些基础设施的部署配置存放在本仓库的其他目录中（如 `../alephant/`、`../cnpg-cluster/`），不在 K8s 部署文档的范围内。
+这些组件**不在 `common` chart 中管理**，需提前部署。下面是各中间件的部署参考。
+
+---
+
+## 基础设施部署参考
+
+以下基于生产环境的 Helm 命令。各中间件的完整 values 配置保存在 `middlewares/` 目录下，使用 `-f` 引用即可。
+
+### PostgreSQL (CNPG Operator)
+
+使用内部 `cnpg-cluster` chart 部署高可用 PostgreSQL 集群。
+
+```bash
+helm repo add weconomy https://helm-charts.weconomy.network
+
+helm upgrade --install alephant-postgres weconomy/cnpg-cluster \
+  --version 0.1.16 \
+  --namespace alephant-prod \
+  --create-namespace \
+  -f middlewares/postgres.values.yaml
+```
+
+服务地址: `alephant-postgres-rw.alephant-prod.svc.cluster.local:5432`
+数据库: `alephant`，用户: `alephant`
+
+配置参考: [`middlewares/postgres.values.yaml`](middlewares/postgres.values.yaml)
+
+---
+
+### ClickHouse (Altinity Operator)
+
+使用内部 `clickhouse-cluster` chart 部署 ClickHouse 集群（含 ClickHouse Keeper 仲裁）。
+
+```bash
+helm repo add weconomy https://helm-charts.weconomy.network
+
+helm upgrade --install alephant-clickhouse weconomy/clickhouse-cluster \
+  --version 0.1.1 \
+  --namespace alephant-prod \
+  --create-namespace \
+  -f middlewares/clickhouse.values.yaml
+```
+
+> **注意**: 首次部署需先安装 [Altinity ClickHouse Operator](https://github.com/Altinity/clickhouse-operator)。
+> **部署前请修改**: `middlewares/clickhouse.values.yaml` 中的 `default/password` 和 Pod CIDR。
+
+服务地址:
+- HTTP: `ch-clickhouse.alephant-prod.svc.cluster.local:8123`
+- 原生 TCP: `ch-clickhouse.alephant-prod.svc.cluster.local:9000`
+
+配置参考: [`middlewares/clickhouse.values.yaml`](middlewares/clickhouse.values.yaml)
+
+---
+
+### Valkey / Redis
+
+使用官方 Valkey Helm Chart 部署（兼容 Redis 协议）。
+
+```bash
+helm repo add valkey https://valkey.io/valkey-helm/
+
+helm upgrade --install alephant-valkey valkey/valkey \
+  --version 0.9.4 \
+  --namespace alephant-prod \
+  --create-namespace \
+  -f middlewares/valkey.values.yaml
+```
+
+服务地址: `alephant-valkey.alephant-prod.svc.cluster.local:6379`
+
+配置参考: [`middlewares/valkey.values.yaml`](middlewares/valkey.values.yaml)
+
+---
+
+### Qdrant (向量数据库)
+
+使用官方 Qdrant Helm Chart 部署 3 节点集群（含内网 API Key 认证）。
+
+```bash
+helm repo add qdrant https://qdrant.github.io/qdrant-helm/
+
+helm upgrade --install alephant-prod-qdrant qdrant/qdrant \
+  --version 1.17.1 \
+  --namespace alephant-prod \
+  --create-namespace \
+  -f middlewares/qdrant.values.yaml
+```
+
+服务地址:
+- HTTP: `alephant-prod-qdrant.alephant-prod.svc.cluster.local:6333`
+- gRPC: `alephant-prod-qdrant.alephant-prod.svc.cluster.local:6334`
+
+配置参考: [`middlewares/qdrant.values.yaml`](middlewares/qdrant.values.yaml)
+
+---
+
+### MinIO (S3 兼容对象存储)
+
+使用 Bitnami MinIO Chart 部署。如需生产高可用，修改 `mode: distributed` 并调整副本数。
+
+> ⚠️ **注意**: Docker Compose 中使用的是 `pgsty/minio:latest` 自定义镜像。
+> 如果业务依赖 `pgsty/minio` 的特性，可以将 values 中的 `mode`/`auth` 替换为直接使用 `pgsty/minio` 镜像（参见 values 文件内的注释）。
+
+```bash
+helm repo add bitnami https://charts.bitnami.com/bitnami
+
+helm upgrade --install alephant-minio bitnami/minio \
+  --namespace alephant-prod \
+  --create-namespace \
+  -f middlewares/minio.values.yaml
+```
+
+服务地址:
+- S3 API: `alephant-minio.alephant-prod.svc.cluster.local:9000`
+- Console: `alephant-minio.alephant-prod.svc.cluster.local:9001`
+
+配置参考: [`middlewares/minio.values.yaml`](middlewares/minio.values.yaml)
+
+---
+
+### TiKV + PD (分布式 KV 存储)
+
+TiKV + PD 在 Docker Compose 中直接使用 PingCAP 官方镜像启动。K8s 环境可通过 [TiDB Operator](https://docs.pingcap.com/tidb-in-kubernetes/) 部署 TiKV 集群，或手工创建 StatefulSet。
+
+生产参考 values 参见: `../alephantai-tikv.yaml`
+
+服务地址:
+- PD: `pd.alephant-prod.svc.cluster.local:2379`
+- TiKV: `tikv.alephant-prod.svc.cluster.local:20160`
 
 ---
 

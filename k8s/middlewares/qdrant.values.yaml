@@ -1,0 +1,57 @@
+# =============================================================================
+# Alephant — Qdrant 向量数据库 部署配置
+# =============================================================================
+# Chart: qdrant/qdrant (官方 Chart)
+# 用法:
+#   helm repo add qdrant https://qdrant.github.io/qdrant-helm/
+#   helm upgrade --install alephant-prod-qdrant qdrant/qdrant \
+#     --version 1.17.1 \
+#     --namespace alephant-prod \
+#     --create-namespace \
+#     -f middlewares/qdrant.values.yaml
+# =============================================================================
+
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+persistence:
+  enabled: true
+  storageClassName: alicloud-disk-essd    # ← 按你的集群存储类修改
+  size: 50Gi
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - qdrant
+            - key: app.kubernetes.io/instance
+              operator: In
+              values:
+                - alephant-prod-qdrant
+        topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: qdrant
+        app.kubernetes.io/instance: alephant-prod-qdrant
+
+config:
+  cluster:
+    enabled: true
+  service:
+    api_key: "CHANGE_ME"                   # ← 务必替换，与业务服务配置一致
