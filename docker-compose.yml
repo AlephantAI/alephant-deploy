@@ -352,7 +352,7 @@ services:
   # Logs Collector
   # ---------------------------------------------------------------------------
   logs-collector:
-    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephantai-logs-collector:20260712195944}
+    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephantai-logs-collector:2026071219594}
     container_name: alephant-logs-collector
     restart: unless-stopped
     networks:
