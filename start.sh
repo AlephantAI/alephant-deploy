@@ -3,6 +3,12 @@
 # start.sh — Alephant 一键部署脚本
 # 使用方式:
 #   cd alephant-docker/ && bash start.sh
+#
+# 脚本自动完成:
+# 1. 生成随机密码和密钥
+# 2. 填充所有环境变量文件
+# 3. 交互式收集 License 信息（邮箱 + license.jwt）
+# 4. 拉取镜像并启动全部服务
 # =============================================================================
 set -euo pipefail
 
@@ -243,6 +249,61 @@ EOF
   info "  JWT 密钥:        ${JWT_SECRET}"
 }
 
+# ─── License 激活信息收集 ────────────────────────────────────────────────
+collect_license() {
+  echo ""
+  echo "═══════════════════════════════════════════"
+  echo "  License 激活"
+  echo "═══════════════════════════════════════════"
+  echo ""
+
+  # ── 1. 工作空间拥有者邮箱 ──
+  while [ -z "${PRIVATE_WORKSPACE_OWNER_EMAILS:-}" ]; do
+    read -r -p "  请输入工作空间拥有者邮箱 (多个用逗号分隔): " PRIVATE_WORKSPACE_OWNER_EMAILS
+    [ -z "${PRIVATE_WORKSPACE_OWNER_EMAILS}" ] && warn "邮箱不能为空，请重新输入"
+  done
+
+  # ── 2. license.jwt ──
+  local LICENSE_DIR="${COMPOSE_DIR}/license"
+  mkdir -p "${LICENSE_DIR}"
+
+  if [ -f "${LICENSE_DIR}/license.jwt" ] && [ -s "${LICENSE_DIR}/license.jwt" ]; then
+    # 已有文件，询问是否覆盖
+    local OVERWRITE
+    read -r -p "  license/license.jwt 已存在，是否覆盖? (y/N): " OVERWRITE
+    if [[ ! "${OVERWRITE}" =~ ^[Yy]$ ]]; then
+      ok "保留已有 license.jwt"
+    else
+      write_license_file "${LICENSE_DIR}"
+    fi
+  else
+    write_license_file "${LICENSE_DIR}"
+  fi
+
+  # ── 写入 .env ──
+  echo "PRIVATE_WORKSPACE_OWNER_EMAILS=${PRIVATE_WORKSPACE_OWNER_EMAILS}" >> "${COMPOSE_DIR}/.env"
+  ok "PRIVATE_WORKSPACE_OWNER_EMAILS 已写入 .env"
+
+  echo ""
+  ok "License 配置完成"
+}
+
+write_license_file() {
+  local dir="$1"
+  echo ""
+  echo "  请将从 Alephant 团队获取的 JWT 内容粘贴到下方，"
+  echo "  粘贴完成后按 Ctrl+D (EOF) 结束:"
+  echo ""
+  local content
+  content=$(cat) || true
+  if [ -n "${content}" ]; then
+    echo "${content}" > "${dir}/license.jwt"
+    ok "license.jwt 已写入 (${#content} 字符)"
+  else
+    warn "内容为空，跳过 license.jwt 写入"
+  fi
+}
+
 # ─── 启动服务 ──────────────────────────────────────────────────────────────
 start_services() {
   info "启动所有服务..."
@@ -264,6 +325,7 @@ main() {
 
   check_prereqs
   generate_config
+  collect_license
   start_services
 
   echo ""

@@ -8,9 +8,8 @@ bash start.sh
 自动完成：
 1. 生成随机密码和密钥
 2. 填充所有环境变量文件
-3. 从 S3 下载业务镜像
-4. 拉取中间件（postgres、clickhouse、valkey、qdrant、pd、tikv、minio）
-5. 启动全部 12 个服务
+3. 交互式收集 License 信息（邮箱 + license.jwt）
+4. 拉取镜像并启动全部服务
 
 ## 前置依赖
 
@@ -48,29 +47,62 @@ curl --version || wget --version
 
 Alephant 私有化部署需要有效的 License 文件进行授权验证。
 
-### 首次激活
+### 首次激活（使用 start.sh）
 
-1. 联系 Alephant 团队获取 `license.jwt` 文件
-2. 将文件内容复制到 `license/license.jwt`：
-3. 设置工作空间拥有者邮箱（**必填**），在 `infra.env` 或启动前 export：
+`bash start.sh` 会**自动提示**输入 License 信息，无需手动操作：
 
 ```bash
-export PRIVATE_WORKSPACE_OWNER_EMAILS="admin@example.com"
+bash start.sh
 ```
 
-4. 启动服务后，系统会自动验证 License 有效性
+脚本执行过程中会依次提示：
+
+```
+═══════════════════════════════════════════
+  License 激活
+═══════════════════════════════════════════
+
+  请输入工作空间拥有者邮箱 (多个用逗号分隔): admin@example.com
+
+  请将从 Alephant 团队获取的 JWT 内容粘贴到下方，
+  粘贴完成后按 Ctrl+D (EOF) 结束:
+  <粘贴 license.jwt 内容>
+```
+
+脚本自动完成：
+1. 将邮箱写入 `.env` 文件
+2. 将 JWT 内容写入 `license/license.jwt`
+
+### 手动激活
+
+如果希望跳过交互式提示，也可以提前准备：
+
+```bash
+# 1. 准备 license 文件
+mkdir -p license
+cat > license/license.jwt << 'EOF'
+<从 Alephant 团队获取的 JWT 内容>
+EOF
+
+# 2. 设置邮箱（写入 .env 供 docker compose 读取）
+echo 'PRIVATE_WORKSPACE_OWNER_EMAILS=admin@example.com' >> .env
+
+# 3. 运行脚本（将跳过 License 交互步骤）
+bash start.sh
+```
 
 ### 更新 License
 
 如需续期或更换 License：
 
 ```bash
-# 覆盖原有文件
+# 重新运行脚本（会提示重新输入）
+bash start.sh
+
+# 或手动覆盖后重启
 cat > license/license.jwt << 'EOF'
 <新的 JWT 内容>
 EOF
-
-# 重启 saas-service 使其生效
 docker compose restart saas-service
 ```
 
@@ -203,8 +235,4 @@ cat infra.env          # 基础设施密码
 cat saas-service.env   # SaaS 后端配置
 ```
 
-### 额外环境变量
-
-| 变量名 | 说明 | 必填 |
-|---|---|---|
-| `PRIVATE_WORKSPACE_OWNER_EMAILS` | 工作空间拥有者邮箱，多个用逗号分隔（例: `admin@example.com,user2@example.com`） | **是** |
+> `PRIVATE_WORKSPACE_OWNER_EMAILS` 和 `license.jwt` 通过 `bash start.sh` 交互式输入，无需手动编辑。
