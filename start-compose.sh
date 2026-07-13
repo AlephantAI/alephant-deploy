@@ -42,12 +42,12 @@ load_or_generate_infra_config() {
     # shellcheck disable=SC1091
     source "${COMPOSE_PROJECT_DIR}/infra.env"
     # 兼容旧版 infra.env（缺少部分变量）
-    POSTGRES_PASSWORD="${PO*************************wd)}"
-    CLICKHOUSE_PASSWORD="${CL***************************wd)}"
-    VALKEY_PASSWORD="${VA***********************wd)}"
-    QDRANT_API_KEY="${QD***********************en)}"
+    POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-"$(gen_pswd)"}"
+    CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-"$(gen_pswd)"}"
+    VALKEY_PASSWORD="${VALKEY_PASSWORD:-"$(gen_pswd)"}"
+    QDRANT_API_KEY="${QDRANT_API_KEY:-"$(gen_key)"}"
     MINIO_ROOT_USER="${MINIO_ROOT_USER:-minioadmin}"
-    MINIO_ROOT_PASSWORD="${MI***************************wd)}"
+    MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-"$(gen_pswd)"}"
     return
   fi
 

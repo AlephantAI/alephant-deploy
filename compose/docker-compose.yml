@@ -152,12 +152,13 @@ services:
     env_file:
       - infra.env
     environment:
-            QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      test: ["CMD-SHELL", "grep -q ':18BD ' /proc/net/tcp"]
       interval: 10s
       timeout: 3s
-      retries: 6
+      retries: 15
+      start_period: 10s
     deploy:
       resources:
         limits:
