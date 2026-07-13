@@ -11,7 +11,7 @@ app:
   name: alephant-app
   image:
     repository: alephant-app
-    tag: "20260712195934"
+    tag: "20260713084819"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
