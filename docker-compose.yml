@@ -271,7 +271,7 @@ services:
       - policy-service
       - ai-gateway
       - logs-collector
-    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260713084819}
+    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260713140939}
     container_name: alephant-app
     restart: unless-stopped
     networks:

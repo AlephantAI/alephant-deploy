@@ -1,5 +1,5 @@
 -- agent_events_rmt DDL
-CREATE TABLE `agent_events_rmt` (
+CREATE TABLE IF NOT EXISTS `agent_events_rmt` (
 	`event_id` String,
 	`workspace_id` UUID,
 	`workspace_type` LowCardinality(String) DEFAULT '',
@@ -41,13 +41,13 @@ CREATE TABLE `agent_events_rmt` (
 	`updated_at` DateTime64(3, 'UTC') DEFAULT now64(3)
 ) ENGINE = ReplacingMergeTree ORDER BY (`workspace_id`,`event_id`) PARTITION BY (toYYYYMM(event_time)) PRIMARY KEY (`workspace_id`,`event_id`) SETTINGS index_granularity = 8192;
 ALTER TABLE `agent_events_rmt` 
-ADD INDEX `idx_agent_run` (alephant_agent_id, alephant_run_id) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_step_id` alephant_step_id TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_tool_call_id` tool_call_id TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_event_type` event_type TYPE set(128) GRANULARITY 4,
-ADD INDEX `idx_step_kind` step_kind TYPE set(64) GRANULARITY 4;
+ADD INDEX IF NOT EXISTS `idx_agent_run` (alephant_agent_id, alephant_run_id) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_step_id` alephant_step_id TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_tool_call_id` tool_call_id TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_event_type` event_type TYPE set(128) GRANULARITY 4,
+ADD INDEX IF NOT EXISTS `idx_step_kind` step_kind TYPE set(64) GRANULARITY 4;
 -- cache_metrics DDL
-CREATE TABLE `cache_metrics` (
+CREATE TABLE IF NOT EXISTS `cache_metrics` (
 	`organization_id` UUID,
 	`date` Date,
 	`hour` UInt8,
@@ -68,24 +68,24 @@ CREATE TABLE `cache_metrics` (
 	`response_body` String DEFAULT ''
 ) ENGINE = AggregatingMergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
 -- helicone_migrations DDL
-CREATE TABLE `helicone_migrations` (
+CREATE TABLE IF NOT EXISTS `helicone_migrations` (
 	`migration_name` String,
 	`applied_date` DateTime DEFAULT now()
 ) ENGINE = MergeTree ORDER BY (`migration_name`) PRIMARY KEY (`migration_name`) SETTINGS index_granularity = 8192;
 -- hidden_property_keys DDL
-CREATE TABLE `hidden_property_keys` (
+CREATE TABLE IF NOT EXISTS `hidden_property_keys` (
 	`organization_id` UUID,
 	`key` String,
 	`is_hidden` UInt8 DEFAULT 1
 ) ENGINE = MergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
 -- hidden_props DDL
-CREATE TABLE `hidden_props` (
+CREATE TABLE IF NOT EXISTS `hidden_props` (
 	`organization_id` UUID,
 	`key` String,
 	`is_hidden` UInt8
-) ENGINE = Dictionary ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`);
+) ENGINE = MergeTree ORDER BY (`organization_id`, `key`) PRIMARY KEY (`organization_id`);
 -- jawn_http_logs DDL
-CREATE TABLE `jawn_http_logs` (
+CREATE TABLE IF NOT EXISTS `jawn_http_logs` (
 	`organization_id` UUID,
 	`method` String,
 	`url` String,
@@ -96,7 +96,7 @@ CREATE TABLE `jawn_http_logs` (
 	`properties` Map(String, String)
 ) ENGINE = MergeTree ORDER BY (`organization_id`) PARTITION BY (toYYYYMM(created_at)) PRIMARY KEY (`organization_id`) TTL toDateTime(created_at) + toIntervalDay(90) SETTINGS index_granularity = 8192;
 -- key_market_usage_application_model_month DDL
-CREATE TABLE `key_market_usage_application_model_month` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_application_model_month` (
 	`month_start` DateTime('UTC'),
 	`account_id` String,
 	`workspace_id` String,
@@ -108,7 +108,7 @@ CREATE TABLE `key_market_usage_application_model_month` (
 	`request_count` AggregateFunction(count)
 ) ENGINE = AggregatingMergeTree ORDER BY (`account_id`,`month_start`) PARTITION BY (toYYYYMM(month_start)) PRIMARY KEY (`account_id`,`month_start`) SETTINGS index_granularity = 8192;
 -- key_market_usage_cost_by_upstream_month DDL
-CREATE TABLE `key_market_usage_cost_by_upstream_month` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_cost_by_upstream_month` (
 	`month_start` DateTime('UTC'),
 	`account_id` String,
 	`upstream_id` String,
@@ -117,7 +117,7 @@ CREATE TABLE `key_market_usage_cost_by_upstream_month` (
 	`cost_sum` AggregateFunction(sum, UInt64)
 ) ENGINE = AggregatingMergeTree ORDER BY (`account_id`,`month_start`) PARTITION BY (toYYYYMM(month_start)) PRIMARY KEY (`account_id`,`month_start`) SETTINGS index_granularity = 8192;
 -- key_market_usage_health_by_model_provider DDL
-CREATE TABLE `key_market_usage_health_by_model_provider` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_health_by_model_provider` (
 	`bucket_start` DateTime('UTC'),
 	`provider` LowCardinality(String),
 	`model` LowCardinality(String),
@@ -127,7 +127,7 @@ CREATE TABLE `key_market_usage_health_by_model_provider` (
 	`other_count` AggregateFunction(countIf, UInt8)
 ) ENGINE = AggregatingMergeTree ORDER BY (`provider`,`bucket_start`) PARTITION BY (toYYYYMM(bucket_start)) PRIMARY KEY (`provider`,`bucket_start`) SETTINGS index_granularity = 8192;
 -- key_market_usage_health_by_router_model_provider DDL
-CREATE TABLE `key_market_usage_health_by_router_model_provider` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_health_by_router_model_provider` (
 	`bucket_start` DateTime('UTC'),
 	`provider` LowCardinality(String),
 	`model` LowCardinality(String),
@@ -138,7 +138,7 @@ CREATE TABLE `key_market_usage_health_by_router_model_provider` (
 	`other_count` AggregateFunction(countIf, UInt8)
 ) ENGINE = AggregatingMergeTree ORDER BY (`provider`,`bucket_start`) PARTITION BY (toYYYYMM(bucket_start)) PRIMARY KEY (`provider`,`bucket_start`) SETTINGS index_granularity = 8192;
 -- key_market_usage_latency_by_model_provider DDL
-CREATE TABLE `key_market_usage_latency_by_model_provider` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_latency_by_model_provider` (
 	`provider` LowCardinality(String),
 	`model` LowCardinality(String),
 	`latency_min` AggregateFunction(min, UInt64),
@@ -146,7 +146,7 @@ CREATE TABLE `key_market_usage_latency_by_model_provider` (
 	`latency_p50` AggregateFunction(quantileTDigest(0.5), UInt64)
 ) ENGINE = AggregatingMergeTree ORDER BY (`provider`) PRIMARY KEY (`provider`) SETTINGS index_granularity = 8192;
 -- key_market_usage_logs DDL
-CREATE TABLE `key_market_usage_logs` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_logs` (
 	`account_id` String,
 	`workspace_id` String DEFAULT '',
 	`provider` String DEFAULT '',
@@ -173,7 +173,7 @@ CREATE TABLE `key_market_usage_logs` (
 	`application_id` String DEFAULT ''
 ) ENGINE = MergeTree ORDER BY (`account_id`) PARTITION BY (toYYYYMM(time)) PRIMARY KEY (`account_id`) SETTINGS index_granularity = 8192;
 -- key_market_usage_partner_month DDL
-CREATE TABLE `key_market_usage_partner_month` (
+CREATE TABLE IF NOT EXISTS `key_market_usage_partner_month` (
 	`month_start` DateTime('UTC'),
 	`account_id` String,
 	`partner_id` String,
@@ -182,17 +182,17 @@ CREATE TABLE `key_market_usage_partner_month` (
 	`request_count` AggregateFunction(count)
 ) ENGINE = AggregatingMergeTree ORDER BY (`partner_id`,`month_start`) PARTITION BY (toYYYYMM(month_start)) PRIMARY KEY (`partner_id`,`month_start`) SETTINGS index_granularity = 8192;
 -- organization_properties DDL
-CREATE TABLE `organization_properties` (
+CREATE TABLE IF NOT EXISTS `organization_properties` (
 	`organization_id` UUID,
 	`property_key` String
 ) ENGINE = ReplacingMergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
 -- organization_ptb_spend DDL
-CREATE TABLE `organization_ptb_spend` (
+CREATE TABLE IF NOT EXISTS `organization_ptb_spend` (
 	`organization_id` UUID,
 	`spend` UInt64
 ) ENGINE = SummingMergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
 -- prompt_usage_daily DDL
-CREATE TABLE `prompt_usage_daily` (
+CREATE TABLE IF NOT EXISTS `prompt_usage_daily` (
 	`date` Date,
 	`workspace_id` UUID,
 	`prompt_id` String,
@@ -209,16 +209,16 @@ CREATE TABLE `prompt_usage_daily` (
 	`error_count` UInt64
 ) ENGINE = SummingMergeTree ORDER BY (`date`) PARTITION BY (toYYYYMM(date)) PRIMARY KEY (`date`) SETTINGS index_granularity = 8192;
 -- properties_v3 DDL
-CREATE TABLE `properties_v3` (
+CREATE TABLE IF NOT EXISTS `properties_v3` (
 	`organization_id` UUID,
 	`key` String,
 	`value` String,
 	`created_at` DateTime64(3),
 	`id` Int64,
 	`request_id` UUID
-) ENGINE = MergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
+) ENGINE = MergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 -- property_with_response_v1 DDL
-CREATE TABLE `property_with_response_v1` (
+CREATE TABLE IF NOT EXISTS `property_with_response_v1` (
 	`response_id` Nullable(UUID),
 	`response_created_at` Nullable(DateTime64(3)),
 	`latency` Nullable(Int64),
@@ -237,9 +237,9 @@ CREATE TABLE `property_with_response_v1` (
 	`country_code` Nullable(String),
 	`property_key` String,
 	`property_value` String
-) ENGINE = MergeTree ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192;
+) ENGINE = MergeTree ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 -- request_response_log DDL
-CREATE TABLE `request_response_log` (
+CREATE TABLE IF NOT EXISTS `request_response_log` (
 	`response_id` Nullable(UUID),
 	`response_created_at` Nullable(DateTime64(3)),
 	`latency` Nullable(Int64),
@@ -262,9 +262,9 @@ CREATE TABLE `request_response_log` (
 	`request_ip` Nullable(String),
 	`country_code` Nullable(String),
 	`created_at` DateTime DEFAULT now()
-) ENGINE = MergeTree ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192;
+) ENGINE = MergeTree ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 -- request_response_rmt DDL
-CREATE TABLE `request_response_rmt` (
+CREATE TABLE IF NOT EXISTS `request_response_rmt` (
 	`response_id` Nullable(UUID),
 	`response_created_at` Nullable(DateTime64(3)),
 	`latency` Nullable(Int64),
@@ -332,18 +332,18 @@ CREATE TABLE `request_response_rmt` (
 	`alephant_step_confidence` LowCardinality(String) DEFAULT '',
 	`alephant_agent_trust_level` LowCardinality(String) DEFAULT '',
 	`workspace_type` LowCardinality(String) DEFAULT ''
-) ENGINE = ReplacingMergeTree ORDER BY (`workspace_id`,`response_id`) PARTITION BY (toYYYYMM(request_created_at)) PRIMARY KEY (`workspace_id`,`response_id`) SETTINGS index_granularity = 8192;
+) ENGINE = ReplacingMergeTree ORDER BY (`workspace_id`,`response_id`) PARTITION BY (toYYYYMM(request_created_at)) PRIMARY KEY (`workspace_id`,`response_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 ALTER TABLE `request_response_rmt` 
-ADD INDEX `idx_properties_key` mapKeys(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_properties_value` mapValues(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_scores_key` mapKeys(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_scores_value` mapValues(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_request_body_bloom` request_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
-ADD INDEX `idx_response_body_bloom` response_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
-ADD INDEX `idx_org_passthrough_billing` (workspace_id, is_passthrough_billing) TYPE set(2) GRANULARITY 4,
-ADD INDEX `idx_request_id_bf` request_id TYPE bloom_filter(0.01) GRANULARITY 1;
+ADD INDEX IF NOT EXISTS `idx_properties_key` mapKeys(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_properties_value` mapValues(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_scores_key` mapKeys(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_scores_value` mapValues(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_request_body_bloom` request_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_response_body_bloom` response_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_org_passthrough_billing` (workspace_id, is_passthrough_billing) TYPE set(2) GRANULARITY 4,
+ADD INDEX IF NOT EXISTS `idx_request_id_bf` request_id TYPE bloom_filter(0.01) GRANULARITY 1;
 -- request_response_versioned DDL
-CREATE TABLE `request_response_versioned` (
+CREATE TABLE IF NOT EXISTS `request_response_versioned` (
 	`response_id` Nullable(UUID),
 	`response_created_at` Nullable(DateTime64(3)),
 	`latency` Nullable(Int64),
@@ -368,16 +368,16 @@ CREATE TABLE `request_response_versioned` (
 	`assets` Array(String) CODEC(ZSTD(1)),
 	`response_body` String DEFAULT '' TTL toDateTime(request_created_at) + toIntervalMonth(3),
 	`request_body` String DEFAULT '' TTL toDateTime(request_created_at) + toIntervalMonth(3)
-) ENGINE = VersionedCollapsingMergeTree ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192;
+) ENGINE = VersionedCollapsingMergeTree(sign, version) ORDER BY (`organization_id`,`response_id`) PRIMARY KEY (`organization_id`,`response_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 ALTER TABLE `request_response_versioned` 
-ADD INDEX `idx_properties_key` mapKeys(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_properties_value` mapValues(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_scores_key` mapKeys(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_scores_value` mapValues(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
-ADD INDEX `idx_request_body_bloom` request_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
-ADD INDEX `idx_response_body_bloom` response_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1;
+ADD INDEX IF NOT EXISTS `idx_properties_key` mapKeys(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_properties_value` mapValues(properties) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_scores_key` mapKeys(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_scores_value` mapValues(scores) TYPE bloom_filter(0.01) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_request_body_bloom` request_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1,
+ADD INDEX IF NOT EXISTS `idx_response_body_bloom` response_body TYPE ngrambf_v1(4, 1024, 1, 0) GRANULARITY 1;
 -- request_stats DDL
-CREATE TABLE `request_stats` (
+CREATE TABLE IF NOT EXISTS `request_stats` (
 	`hour` DateTime,
 	`model` LowCardinality(String),
 	`provider` LowCardinality(String),
@@ -392,17 +392,17 @@ CREATE TABLE `request_stats` (
 	`ttft_sum` SimpleAggregateFunction(sum, Int64),
 	`total_requests` SimpleAggregateFunction(sum, UInt64),
 	`successful_requests` SimpleAggregateFunction(sum, UInt64)
-) ENGINE = SummingMergeTree ORDER BY (`hour`) PRIMARY KEY (`hour`) SETTINGS index_granularity = 8192;
+) ENGINE = SummingMergeTree ORDER BY (`hour`) PRIMARY KEY (`hour`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 -- tags DDL
-CREATE TABLE `tags` (
+CREATE TABLE IF NOT EXISTS `tags` (
 	`organization_id` UUID,
 	`entity_type` String,
 	`entity_id` String,
 	`tag` String,
 	`created_at` DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192;
+) ENGINE = ReplacingMergeTree ORDER BY (`organization_id`) PRIMARY KEY (`organization_id`) SETTINGS index_granularity = 8192, allow_nullable_key = 1;
 -- usage_aggregates_daily DDL
-CREATE TABLE `usage_aggregates_daily` (
+CREATE TABLE IF NOT EXISTS `usage_aggregates_daily` (
 	`date` Date,
 	`workspace_id` UUID,
 	`department_id` UUID DEFAULT '00000000-0000-0000-0000-000000000000',
@@ -424,7 +424,7 @@ CREATE TABLE `usage_aggregates_daily` (
 	`entity_name` SimpleAggregateFunction(anyLast, String)
 ) ENGINE = SummingMergeTree ORDER BY (`workspace_id`,`date`) PARTITION BY (toYYYYMM(date)) PRIMARY KEY (`workspace_id`,`date`) SETTINGS index_granularity = 8192;
 -- usage_aggregates_hourly DDL
-CREATE TABLE `usage_aggregates_hourly` (
+CREATE TABLE IF NOT EXISTS `usage_aggregates_hourly` (
 	`bucket_hour` DateTime,
 	`workspace_id` UUID,
 	`department_id` UUID DEFAULT '00000000-0000-0000-0000-000000000000',
@@ -447,7 +447,7 @@ CREATE TABLE `usage_aggregates_hourly` (
 	`cache_saved_cost_corrected_sum` UInt64 DEFAULT 0
 ) ENGINE = SummingMergeTree ORDER BY (`workspace_id`,`bucket_hour`) PARTITION BY (toYYYYMM(bucket_hour)) PRIMARY KEY (`workspace_id`,`bucket_hour`) SETTINGS index_granularity = 8192;
 -- x402_activity_fact DDL
-CREATE TABLE `x402_activity_fact` (
+CREATE TABLE IF NOT EXISTS `x402_activity_fact` (
 	`event_time` DateTime64(3),
 	`workspace_id` UUID,
 	`activity_id` UUID,
@@ -482,7 +482,7 @@ CREATE TABLE `x402_activity_fact` (
 	`verify_time` Nullable(DateTime64(3))
 ) ENGINE = MergeTree ORDER BY (`workspace_id`,`event_time`) PARTITION BY (toYYYYMM(event_time)) PRIMARY KEY (`workspace_id`,`event_time`) SETTINGS index_granularity = 8192;
 -- x402_revenue_daily DDL
-CREATE TABLE `x402_revenue_daily` (
+CREATE TABLE IF NOT EXISTS `x402_revenue_daily` (
 	`date` Date,
 	`workspace_id` UUID,
 	`endpoint_id` UUID DEFAULT '00000000-0000-0000-0000-000000000000',
@@ -500,7 +500,7 @@ CREATE TABLE `x402_revenue_daily` (
 	`last_event_at` SimpleAggregateFunction(max, DateTime64(3))
 ) ENGINE = SummingMergeTree ORDER BY (`workspace_id`,`date`) PARTITION BY (toYYYYMM(date)) PRIMARY KEY (`workspace_id`,`date`) SETTINGS index_granularity = 8192;
 -- x402_settlement_events DDL
-CREATE TABLE `x402_settlement_events` (
+CREATE TABLE IF NOT EXISTS `x402_settlement_events` (
 	`event_time` DateTime64(3),
 	`workspace_id` UUID,
 	`settlement_id` UUID,
@@ -591,30 +591,30 @@ CREATE TABLE `x402_settlement_events` (
 
 
 -- entity_token_dist_daily view
-CREATE MATERIALIZED VIEW default.entity_token_dist_daily (`workspace_id` UUID, `entity_id` UUID, `date` Date, `token_bucket` String, `bucket_count` UInt64) ENGINE = AggregatingMergeTree PARTITION BY toYYYYMM(date) ORDER BY (workspace_id, entity_id, token_bucket) SETTINGS index_granularity = 8192 AS SELECT workspace_id, entity_id, toDate(request_created_at) AS date, multiIf((prompt_tokens + completion_tokens) < 100, '0-100', (prompt_tokens + completion_tokens) < 500, '100-500', (prompt_tokens + completion_tokens) < 2000, '500-2000', '2000+') AS token_bucket, count() AS bucket_count FROM default.request_response_rmt WHERE request_created_at >= (now() - toIntervalDay(31)) GROUP BY workspace_id, entity_id, date, token_bucket;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.entity_token_dist_daily (`workspace_id` UUID, `entity_id` UUID, `date` Date, `token_bucket` String, `bucket_count` UInt64) ENGINE = AggregatingMergeTree PARTITION BY toYYYYMM(date) ORDER BY (workspace_id, entity_id, token_bucket) SETTINGS index_granularity = 8192 AS SELECT workspace_id, entity_id, toDate(request_created_at) AS date, multiIf((prompt_tokens + completion_tokens) < 100, '0-100', (prompt_tokens + completion_tokens) < 500, '100-500', (prompt_tokens + completion_tokens) < 2000, '500-2000', '2000+') AS token_bucket, count() AS bucket_count FROM default.request_response_rmt WHERE request_created_at >= (now() - toIntervalDay(31)) GROUP BY workspace_id, entity_id, date, token_bucket;
 -- key_market_usage_application_model_month_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_application_model_month_mv TO default.key_market_usage_application_model_month (`month_start` Date, `account_id` String, `workspace_id` String, `application_id` String, `model` LowCardinality(String), `cost_sum` AggregateFunction(sum, UInt64), `prompt_token_sum` AggregateFunction(sum, UInt64), `completion_token_sum` AggregateFunction(sum, UInt64), `request_count` AggregateFunction(count)) AS SELECT toStartOfMonth(time) AS month_start, account_id, workspace_id, application_id, model, sumState(cost) AS cost_sum, sumState(prompt_token) AS prompt_token_sum, sumState(completion_token) AS completion_token_sum, countState() AS request_count FROM default.key_market_usage_logs WHERE (application_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, workspace_id, application_id, model;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_application_model_month_mv TO default.key_market_usage_application_model_month (`month_start` Date, `account_id` String, `workspace_id` String, `application_id` String, `model` LowCardinality(String), `cost_sum` AggregateFunction(sum, UInt64), `prompt_token_sum` AggregateFunction(sum, UInt64), `completion_token_sum` AggregateFunction(sum, UInt64), `request_count` AggregateFunction(count)) AS SELECT toStartOfMonth(time) AS month_start, account_id, workspace_id, application_id, model, sumState(cost) AS cost_sum, sumState(prompt_token) AS prompt_token_sum, sumState(completion_token) AS completion_token_sum, countState() AS request_count FROM default.key_market_usage_logs WHERE (application_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, workspace_id, application_id, model;
 -- key_market_usage_cost_by_upstream_month_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_cost_by_upstream_month_mv TO default.key_market_usage_cost_by_upstream_month (`month_start` Date, `account_id` String, `upstream_id` String, `provider` String, `model` LowCardinality(String), `cost_sum` AggregateFunction(sum, UInt64)) AS SELECT toStartOfMonth(time) AS month_start, account_id, upstream_id, provider, model, sumState(cost) AS cost_sum FROM default.key_market_usage_logs WHERE (upstream_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, upstream_id, provider, model;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_cost_by_upstream_month_mv TO default.key_market_usage_cost_by_upstream_month (`month_start` Date, `account_id` String, `upstream_id` String, `provider` String, `model` LowCardinality(String), `cost_sum` AggregateFunction(sum, UInt64)) AS SELECT toStartOfMonth(time) AS month_start, account_id, upstream_id, provider, model, sumState(cost) AS cost_sum FROM default.key_market_usage_logs WHERE (upstream_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, upstream_id, provider, model;
 -- key_market_usage_health_by_model_provider_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_health_by_model_provider_mv TO default.key_market_usage_health_by_model_provider (`bucket_start` DateTime('UTC'), `provider` String, `model` LowCardinality(String), `total_count` AggregateFunction(count), `success_count` AggregateFunction(countIf, UInt8), `failed_count` AggregateFunction(countIf, UInt8), `other_count` AggregateFunction(countIf, UInt8)) AS WITH multiIf((status = '') OR (status = 'success'), 'success', status = 'failed', 'failed', 'other') AS normalized_status SELECT toStartOfHour(time) AS bucket_start, provider, model, countState() AS total_count, countIfState(normalized_status = 'success') AS success_count, countIfState(normalized_status = 'failed') AS failed_count, countIfState(normalized_status = 'other') AS other_count FROM default.key_market_usage_logs GROUP BY bucket_start, provider, model;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_health_by_model_provider_mv TO default.key_market_usage_health_by_model_provider (`bucket_start` DateTime('UTC'), `provider` String, `model` LowCardinality(String), `total_count` AggregateFunction(count), `success_count` AggregateFunction(countIf, UInt8), `failed_count` AggregateFunction(countIf, UInt8), `other_count` AggregateFunction(countIf, UInt8)) AS WITH multiIf((status = '') OR (status = 'success'), 'success', status = 'failed', 'failed', 'other') AS normalized_status SELECT toStartOfHour(time) AS bucket_start, provider, model, countState() AS total_count, countIfState(normalized_status = 'success') AS success_count, countIfState(normalized_status = 'failed') AS failed_count, countIfState(normalized_status = 'other') AS other_count FROM default.key_market_usage_logs GROUP BY bucket_start, provider, model;
 -- key_market_usage_health_by_router_model_provider_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_health_by_router_model_provider_mv TO default.key_market_usage_health_by_router_model_provider (`bucket_start` DateTime('UTC'), `provider` String, `model` LowCardinality(String), `router_id` String, `total_count` AggregateFunction(count), `success_count` AggregateFunction(countIf, UInt8), `failed_count` AggregateFunction(countIf, UInt8), `other_count` AggregateFunction(countIf, UInt8)) AS WITH multiIf((status = '') OR (status = 'success'), 'success', status = 'failed', 'failed', 'other') AS normalized_status SELECT toStartOfHour(time) AS bucket_start, provider, model, router_id, countState() AS total_count, countIfState(normalized_status = 'success') AS success_count, countIfState(normalized_status = 'failed') AS failed_count, countIfState(normalized_status = 'other') AS other_count FROM default.key_market_usage_logs WHERE router_id != '' GROUP BY bucket_start, provider, model, router_id;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_health_by_router_model_provider_mv TO default.key_market_usage_health_by_router_model_provider (`bucket_start` DateTime('UTC'), `provider` String, `model` LowCardinality(String), `router_id` String, `total_count` AggregateFunction(count), `success_count` AggregateFunction(countIf, UInt8), `failed_count` AggregateFunction(countIf, UInt8), `other_count` AggregateFunction(countIf, UInt8)) AS WITH multiIf((status = '') OR (status = 'success'), 'success', status = 'failed', 'failed', 'other') AS normalized_status SELECT toStartOfHour(time) AS bucket_start, provider, model, router_id, countState() AS total_count, countIfState(normalized_status = 'success') AS success_count, countIfState(normalized_status = 'failed') AS failed_count, countIfState(normalized_status = 'other') AS other_count FROM default.key_market_usage_logs WHERE router_id != '' GROUP BY bucket_start, provider, model, router_id;
 -- key_market_usage_latency_by_model_provider_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_latency_by_model_provider_mv TO default.key_market_usage_latency_by_model_provider (`provider` String, `model` LowCardinality(String), `latency_min` AggregateFunction(min, UInt64), `latency_max` AggregateFunction(max, UInt64), `latency_p50` AggregateFunction(quantileTDigest(0.5), UInt64)) AS SELECT provider, model, minState(latency) AS latency_min, maxState(latency) AS latency_max, quantileTDigestState(0.5)(latency) AS latency_p50 FROM default.key_market_usage_logs GROUP BY provider, model;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_latency_by_model_provider_mv TO default.key_market_usage_latency_by_model_provider (`provider` String, `model` LowCardinality(String), `latency_min` AggregateFunction(min, UInt64), `latency_max` AggregateFunction(max, UInt64), `latency_p50` AggregateFunction(quantileTDigest(0.5), UInt64)) AS SELECT provider, model, minState(latency) AS latency_min, maxState(latency) AS latency_max, quantileTDigestState(0.5)(latency) AS latency_p50 FROM default.key_market_usage_logs GROUP BY provider, model;
 -- key_market_usage_partner_month_mv view
-CREATE MATERIALIZED VIEW default.key_market_usage_partner_month_mv TO default.key_market_usage_partner_month (`month_start` Date, `account_id` String, `partner_id` String, `cost_sum` AggregateFunction(sum, UInt64), `commission_sum` AggregateFunction(sum, UInt64), `request_count` AggregateFunction(count)) AS SELECT toStartOfMonth(time) AS month_start, account_id, partner_id, sumState(cost) AS cost_sum, sumState(commission_amount) AS commission_sum, countState() AS request_count FROM default.key_market_usage_logs WHERE (partner_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, partner_id;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.key_market_usage_partner_month_mv TO default.key_market_usage_partner_month (`month_start` Date, `account_id` String, `partner_id` String, `cost_sum` AggregateFunction(sum, UInt64), `commission_sum` AggregateFunction(sum, UInt64), `request_count` AggregateFunction(count)) AS SELECT toStartOfMonth(time) AS month_start, account_id, partner_id, sumState(cost) AS cost_sum, sumState(commission_amount) AS commission_sum, countState() AS request_count FROM default.key_market_usage_logs WHERE (partner_id != '') AND ((status = 'success') OR (status = '')) GROUP BY month_start, account_id, partner_id;
 -- organization_properties_mv view
-CREATE MATERIALIZED VIEW default.organization_properties_mv TO default.organization_properties (`organization_id` UUID, `property_key` String) AS SELECT workspace_id AS organization_id, arrayJoin(mapKeys(properties)) AS property_key FROM default.request_response_rmt WHERE length(mapKeys(properties)) > 0;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.organization_properties_mv TO default.organization_properties (`organization_id` UUID, `property_key` String) AS SELECT workspace_id AS organization_id, arrayJoin(mapKeys(properties)) AS property_key FROM default.request_response_rmt WHERE length(mapKeys(properties)) > 0;
 -- organization_ptb_spend_mv view
-CREATE MATERIALIZED VIEW default.organization_ptb_spend_mv TO default.organization_ptb_spend (`organization_id` UUID, `spend` UInt64) AS SELECT workspace_id AS organization_id, sum(cost) AS spend FROM default.request_response_rmt WHERE is_passthrough_billing = true GROUP BY workspace_id;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.organization_ptb_spend_mv TO default.organization_ptb_spend (`organization_id` UUID, `spend` UInt64) AS SELECT workspace_id AS organization_id, sum(cost) AS spend FROM default.request_response_rmt WHERE is_passthrough_billing = true GROUP BY workspace_id;
 -- prompt_usage_daily_mv view
-CREATE MATERIALIZED VIEW default.prompt_usage_daily_mv TO default.prompt_usage_daily (`date` Date, `workspace_id` UUID, `prompt_id` String, `prompt_version` String, `entity_type` String, `entity_id` UUID, `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `latency_ms_sum` Int64, `success_count` UInt64, `error_count` UInt64) AS SELECT toDate(request_created_at) AS date, workspace_id, prompt_id, coalesce(nullIf(prompt_version, ''), 'unknown') AS prompt_version, if(entity_type = '', 'unknown', entity_type) AS entity_type, ifNull(entity_id, toUUID('00000000-0000-0000-0000-000000000000')) AS entity_id, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(latency, 0)) AS latency_ms_sum, countIf((status >= 200) AND (status <= 299)) AS success_count, countIf(status >= 400) AS error_count FROM default.request_response_rmt WHERE (prompt_id != '') AND (prompt_id IS NOT NULL) GROUP BY date, workspace_id, prompt_id, prompt_version, entity_type, entity_id;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.prompt_usage_daily_mv TO default.prompt_usage_daily (`date` Date, `workspace_id` UUID, `prompt_id` String, `prompt_version` String, `entity_type` String, `entity_id` UUID, `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `latency_ms_sum` Int64, `success_count` UInt64, `error_count` UInt64) AS SELECT toDate(request_created_at) AS date, workspace_id, prompt_id, coalesce(nullIf(prompt_version, ''), 'unknown') AS prompt_version, if(entity_type = '', 'unknown', entity_type) AS entity_type, ifNull(entity_id, toUUID('00000000-0000-0000-0000-000000000000')) AS entity_id, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(latency, 0)) AS latency_ms_sum, countIf((status >= 200) AND (status <= 299)) AS success_count, countIf(status >= 400) AS error_count FROM default.request_response_rmt WHERE (prompt_id != '') AND (prompt_id IS NOT NULL) GROUP BY date, workspace_id, prompt_id, prompt_version, entity_type, entity_id;
 -- request_stats_mv view
-CREATE MATERIALIZED VIEW default.request_stats_mv TO default.request_stats (`hour` DateTime, `model` LowCardinality(String), `provider` LowCardinality(String), `is_passthrough_billing` Bool, `total_prompt_tokens` Int64, `total_completion_tokens` Int64, `total_completion_audio_tokens` Int64, `total_prompt_audio_tokens` Int64, `total_prompt_cache_write_tokens` Int64, `total_prompt_cache_read_tokens` Int64, `latency_sum` Int64, `ttft_sum` Int64, `total_requests` UInt64, `successful_requests` UInt64) AS SELECT toStartOfHour(request_created_at) AS hour, model, provider, is_passthrough_billing, sum(coalesce(prompt_tokens, 0)) AS total_prompt_tokens, sum(coalesce(completion_tokens, 0)) AS total_completion_tokens, sum(completion_audio_tokens) AS total_completion_audio_tokens, sum(prompt_audio_tokens) AS total_prompt_audio_tokens, sum(prompt_cache_write_tokens) AS total_prompt_cache_write_tokens, sum(prompt_cache_read_tokens) AS total_prompt_cache_read_tokens, sum(coalesce(latency, 0)) AS latency_sum, sum(coalesce(time_to_first_token, 0)) AS ttft_sum, count(*) AS total_requests, countIf((status >= 200) AND (status <= 299)) AS successful_requests FROM default.request_response_rmt WHERE request_referrer = 'ai-gateway' GROUP BY hour, model, provider, is_passthrough_billing;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.request_stats_mv TO default.request_stats (`hour` DateTime, `model` LowCardinality(String), `provider` LowCardinality(String), `is_passthrough_billing` Bool, `total_prompt_tokens` Int64, `total_completion_tokens` Int64, `total_completion_audio_tokens` Int64, `total_prompt_audio_tokens` Int64, `total_prompt_cache_write_tokens` Int64, `total_prompt_cache_read_tokens` Int64, `latency_sum` Int64, `ttft_sum` Int64, `total_requests` UInt64, `successful_requests` UInt64) AS SELECT toStartOfHour(request_created_at) AS hour, model, provider, is_passthrough_billing, sum(coalesce(prompt_tokens, 0)) AS total_prompt_tokens, sum(coalesce(completion_tokens, 0)) AS total_completion_tokens, sum(completion_audio_tokens) AS total_completion_audio_tokens, sum(prompt_audio_tokens) AS total_prompt_audio_tokens, sum(prompt_cache_write_tokens) AS total_prompt_cache_write_tokens, sum(prompt_cache_read_tokens) AS total_prompt_cache_read_tokens, sum(coalesce(latency, 0)) AS latency_sum, sum(coalesce(time_to_first_token, 0)) AS ttft_sum, count(*) AS total_requests, countIf((status >= 200) AND (status <= 299)) AS successful_requests FROM default.request_response_rmt WHERE request_referrer = 'ai-gateway' GROUP BY hour, model, provider, is_passthrough_billing;
 -- usage_aggregates_daily_mv view
-CREATE MATERIALIZED VIEW default.usage_aggregates_daily_mv TO default.usage_aggregates_daily (`date` Date, `workspace_id` UUID, `department_id` UUID, `entity_type` String, `entity_id` UUID, `model` LowCardinality(String), `provider` LowCardinality(String), `master_key_id` UUID, `entity_name` LowCardinality(String), `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `prompt_cache_read_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `latency_ms_sum` Int64, `success_count` UInt64, `error_count` UInt64, `last_event_at` DateTime64(3)) AS SELECT toDate(request_created_at) AS date, workspace_id, department_id, if(entity_type = '', 'unknown', entity_type) AS entity_type, entity_id, model, provider, ifNull(master_key_id, toUUID('00000000-0000-0000-0000-000000000000')) AS master_key_id, coalesce(nullIf(trimBoth(coalesce(entity_name, '')), ''), '') AS entity_name, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(prompt_cache_read_tokens, 0)) AS prompt_cache_read_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(latency, 0)) AS latency_ms_sum, countIf((status >= 200) AND (status <= 299)) AS success_count, countIf(status >= 400) AS error_count, max(now64(3)) AS last_event_at FROM default.request_response_rmt GROUP BY date, workspace_id, department_id, entity_type, entity_id, model, provider, master_key_id, entity_name;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.usage_aggregates_daily_mv TO default.usage_aggregates_daily (`date` Date, `workspace_id` UUID, `department_id` UUID, `entity_type` String, `entity_id` UUID, `model` LowCardinality(String), `provider` LowCardinality(String), `master_key_id` UUID, `entity_name` LowCardinality(String), `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `prompt_cache_read_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `latency_ms_sum` Int64, `success_count` UInt64, `error_count` UInt64, `last_event_at` DateTime64(3)) AS SELECT toDate(request_created_at) AS date, workspace_id, department_id, if(entity_type = '', 'unknown', entity_type) AS entity_type, entity_id, model, provider, ifNull(master_key_id, toUUID('00000000-0000-0000-0000-000000000000')) AS master_key_id, coalesce(nullIf(trimBoth(coalesce(entity_name, '')), ''), '') AS entity_name, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(prompt_cache_read_tokens, 0)) AS prompt_cache_read_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(latency, 0)) AS latency_ms_sum, countIf((status >= 200) AND (status <= 299)) AS success_count, countIf(status >= 400) AS error_count, max(now64(3)) AS last_event_at FROM default.request_response_rmt GROUP BY date, workspace_id, department_id, entity_type, entity_id, model, provider, master_key_id, entity_name;
 -- usage_aggregates_hourly_mv view
-CREATE MATERIALIZED VIEW default.usage_aggregates_hourly_mv TO default.usage_aggregates_hourly (`bucket_hour` DateTime, `workspace_id` UUID, `department_id` UUID, `entity_type` String, `entity_id` UUID, `entity_name` String, `model` LowCardinality(String), `provider` LowCardinality(String), `master_key_id` UUID, `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `prompt_cache_read_tokens_sum` Int64, `cache_hit_count` UInt64, `cache_miss_count` UInt64, `cache_saved_cost_sum` UInt64, `last_event_at` DateTime64(3)) AS SELECT bucket_hour, workspace_id, department_id, entity_type, entity_id, anyLast(r.entity_name) AS entity_name, model, provider, master_key_id, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(prompt_cache_read_tokens, 0)) AS prompt_cache_read_tokens_sum, countIf(is_cache_hit) AS cache_hit_count, countIf(NOT is_cache_hit) AS cache_miss_count, sum(cache_saved_cost) AS cache_saved_cost_sum, max(now64(3)) AS last_event_at FROM (SELECT toStartOfHour(request_created_at) AS bucket_hour, workspace_id, department_id, if(entity_type = '', 'unknown', entity_type) AS entity_type, entity_id, coalesce(nullIf(trimBoth(coalesce(entity_name, '')), ''), '') AS entity_name, model, provider, ifNull(master_key_id, toUUID('00000000-0000-0000-0000-000000000000')) AS master_key_id, cost, cache_saved_cost, prompt_tokens, completion_tokens, reasoning_tokens, prompt_cache_read_tokens, cache_enabled, cache_reference_id, cache_enabled AND (cache_reference_id != '00000000-0000-0000-0000-000000000000') AS is_cache_hit FROM default.request_response_rmt) AS r GROUP BY bucket_hour, workspace_id, department_id, entity_type, entity_id, model, provider, master_key_id;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.usage_aggregates_hourly_mv TO default.usage_aggregates_hourly (`bucket_hour` DateTime, `workspace_id` UUID, `department_id` UUID, `entity_type` String, `entity_id` UUID, `entity_name` String, `model` LowCardinality(String), `provider` LowCardinality(String), `master_key_id` UUID, `request_count` UInt64, `cost_sum` UInt64, `prompt_tokens_sum` Int64, `completion_tokens_sum` Int64, `reasoning_tokens_sum` Int64, `prompt_cache_read_tokens_sum` Int64, `cache_hit_count` UInt64, `cache_miss_count` UInt64, `cache_saved_cost_sum` UInt64, `last_event_at` DateTime64(3)) AS SELECT bucket_hour, workspace_id, department_id, entity_type, entity_id, anyLast(r.entity_name) AS entity_name, model, provider, master_key_id, count() AS request_count, sum(cost) AS cost_sum, sum(coalesce(prompt_tokens, 0)) AS prompt_tokens_sum, sum(coalesce(completion_tokens, 0)) AS completion_tokens_sum, sum(coalesce(reasoning_tokens, 0)) AS reasoning_tokens_sum, sum(coalesce(prompt_cache_read_tokens, 0)) AS prompt_cache_read_tokens_sum, countIf(is_cache_hit) AS cache_hit_count, countIf(NOT is_cache_hit) AS cache_miss_count, sum(cache_saved_cost) AS cache_saved_cost_sum, max(now64(3)) AS last_event_at FROM (SELECT toStartOfHour(request_created_at) AS bucket_hour, workspace_id, department_id, if(entity_type = '', 'unknown', entity_type) AS entity_type, entity_id, coalesce(nullIf(trimBoth(coalesce(entity_name, '')), ''), '') AS entity_name, model, provider, ifNull(master_key_id, toUUID('00000000-0000-0000-0000-000000000000')) AS master_key_id, cost, cache_saved_cost, prompt_tokens, completion_tokens, reasoning_tokens, prompt_cache_read_tokens, cache_enabled, cache_reference_id, cache_enabled AND (cache_reference_id != '00000000-0000-0000-0000-000000000000') AS is_cache_hit FROM default.request_response_rmt) AS r GROUP BY bucket_hour, workspace_id, department_id, entity_type, entity_id, model, provider, master_key_id;
 -- x402_revenue_daily_mv view
-CREATE MATERIALIZED VIEW default.x402_revenue_daily_mv TO default.x402_revenue_daily (`date` Date, `workspace_id` UUID, `endpoint_id` UUID, `agent_id` UUID, `facilitator` LowCardinality(String), `network` LowCardinality(String), `asset` LowCardinality(String), `request_count` UInt64, `success_count` UInt64, `verified_count` UInt64, `gross_revenue_sum` Float64, `alephant_fee_sum` Float64, `net_revenue_sum` Float64, `ai_cost_sum` Float64, `last_event_at` DateTime64(3)) AS SELECT date, workspace_id, endpoint_id, agent_id, facilitator, network, asset, count(activity_id) AS request_count, countIf(service_status = 'succeeded') AS success_count, countIf(payment_status = 'verified') AS verified_count, sumIf(gross_revenue, (payment_status = 'verified') AND (settlement_status = 'settled')) AS gross_revenue_sum, sumIf(alephant_fee, (payment_status = 'verified') AND (settlement_status = 'settled')) AS alephant_fee_sum, sumIf(net_revenue, (payment_status = 'verified') AND (settlement_status = 'settled')) AS net_revenue_sum, sumIf(ai_cost, (payment_status = 'verified') AND (settlement_status = 'settled')) AS ai_cost_sum, max(now64(3)) AS last_event_at FROM (SELECT toDate(event_time) AS date, workspace_id, endpoint_id, agent_id, facilitator, network, asset, activity_id, service_status, payment_status, settlement_status, gross_revenue, alephant_fee, net_revenue, ai_cost FROM default.x402_activity_fact) AS activity GROUP BY date, workspace_id, endpoint_id, agent_id, facilitator, network, asset;
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.x402_revenue_daily_mv TO default.x402_revenue_daily (`date` Date, `workspace_id` UUID, `endpoint_id` UUID, `agent_id` UUID, `facilitator` LowCardinality(String), `network` LowCardinality(String), `asset` LowCardinality(String), `request_count` UInt64, `success_count` UInt64, `verified_count` UInt64, `gross_revenue_sum` Float64, `alephant_fee_sum` Float64, `net_revenue_sum` Float64, `ai_cost_sum` Float64, `last_event_at` DateTime64(3)) AS SELECT date, workspace_id, endpoint_id, agent_id, facilitator, network, asset, count(activity_id) AS request_count, countIf(service_status = 'succeeded') AS success_count, countIf(payment_status = 'verified') AS verified_count, sumIf(gross_revenue, (payment_status = 'verified') AND (settlement_status = 'settled')) AS gross_revenue_sum, sumIf(alephant_fee, (payment_status = 'verified') AND (settlement_status = 'settled')) AS alephant_fee_sum, sumIf(net_revenue, (payment_status = 'verified') AND (settlement_status = 'settled')) AS net_revenue_sum, sumIf(ai_cost, (payment_status = 'verified') AND (settlement_status = 'settled')) AS ai_cost_sum, max(now64(3)) AS last_event_at FROM (SELECT toDate(event_time) AS date, workspace_id, endpoint_id, agent_id, facilitator, network, asset, activity_id, service_status, payment_status, settlement_status, gross_revenue, alephant_fee, net_revenue, ai_cost FROM default.x402_activity_fact) AS activity GROUP BY date, workspace_id, endpoint_id, agent_id, facilitator, network, asset;
