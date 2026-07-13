@@ -335,7 +335,7 @@ services:
   # ---------------------------------------------------------------------------
   logs-collector:
     platform: linux/amd64
-    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260712195944}
+    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260713182417}
     container_name: alephant-logs-collector
     restart: unless-stopped
     networks:
