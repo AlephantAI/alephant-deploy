@@ -273,7 +273,7 @@ services:
       - policy-service
       - ai-gateway
       - logs-collector
-    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260713140939}
+    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260713171710}
     container_name: alephant-app
     restart: unless-stopped
     networks:
@@ -335,7 +335,7 @@ services:
   # ---------------------------------------------------------------------------
   logs-collector:
     platform: linux/amd64
-    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260713182417}
+    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260713184843}
     container_name: alephant-logs-collector
     restart: unless-stopped
     networks:
