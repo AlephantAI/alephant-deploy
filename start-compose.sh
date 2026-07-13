@@ -89,6 +89,69 @@ check_prereqs() {
   ok "前置检查通过"
 }
 
+# ─── 从 API 拉取最新镜像标签 ──────────────────────────────────────────────
+fetch_latest_tags() {
+  info "获取最新镜像标签..."
+  local API_URL="https://image-versions.alephant.io/alephant/images/latest"
+  local RESPONSE=""
+
+  if command -v curl &>/dev/null; then
+    RESPONSE=$(curl -sf --connect-timeout 5 "$API_URL" 2>/dev/null || true)
+  elif command -v wget &>/dev/null; then
+    RESPONSE=$(wget -qO- --timeout=5 "$API_URL" 2>/dev/null || true)
+  fi
+
+  if [ -z "$RESPONSE" ]; then
+    warn "无法获取最新镜像标签，将使用 docker-compose.yml 中的默认值"
+    return
+  fi
+
+  # API 返回完整镜像 URL: "saas-app": "registry.openmodels.link/alephant/alephant-app:20260713224933"
+  local APP_IMAGE_VAL SAAS_SERVICE_IMAGE_VAL POLICY_SERVICE_IMAGE_VAL AI_GATEWAY_IMAGE_VAL LOGS_COLLECTOR_IMAGE_VAL
+
+  APP_IMAGE_VAL=$(echo "$RESPONSE" | grep -o '"saas-app": *"[^"]*"' | cut -d'"' -f4 || true)
+  SAAS_SERVICE_IMAGE_VAL=$(echo "$RESPONSE" | grep -o '"saas-service": *"[^"]*"' | cut -d'"' -f4 || true)
+  POLICY_SERVICE_IMAGE_VAL=$(echo "$RESPONSE" | grep -o '"policy-service": *"[^"]*"' | cut -d'"' -f4 || true)
+  AI_GATEWAY_IMAGE_VAL=$(echo "$RESPONSE" | grep -o '"ai-gateway": *"[^"]*"' | cut -d'"' -f4 || true)
+  LOGS_COLLECTOR_IMAGE_VAL=$(echo "$RESPONSE" | grep -o '"logs-collector": *"[^"]*"' | cut -d'"' -f4 || true)
+
+  # 导出完整镜像 URL — compose 文件中的 ${VAR:-default} 会自动使用
+  if [ -n "$APP_IMAGE_VAL" ]; then
+    export APP_IMAGE="${APP_IMAGE_VAL}"
+  else
+    warn "saas-app 标签获取失败，使用默认值"
+  fi
+  if [ -n "$SAAS_SERVICE_IMAGE_VAL" ]; then
+    export SAAS_SERVICE_IMAGE="${SAAS_SERVICE_IMAGE_VAL}"
+  else
+    warn "saas-service 标签获取失败，使用默认值"
+  fi
+  if [ -n "$POLICY_SERVICE_IMAGE_VAL" ]; then
+    export POLICY_SERVICE_IMAGE="${POLICY_SERVICE_IMAGE_VAL}"
+  else
+    warn "policy-service 标签获取失败，使用默认值"
+  fi
+  if [ -n "$AI_GATEWAY_IMAGE_VAL" ]; then
+    export AI_GATEWAY_IMAGE="${AI_GATEWAY_IMAGE_VAL}"
+  else
+    warn "ai-gateway 标签获取失败，使用默认值"
+  fi
+  if [ -n "$LOGS_COLLECTOR_IMAGE_VAL" ]; then
+    export LOGS_COLLECTOR_IMAGE="${LOGS_COLLECTOR_IMAGE_VAL}"
+  else
+    warn "logs-collector 标签获取失败，使用默认值"
+  fi
+
+  # 提取 tag 仅用于展示
+  local TAG
+  TAG="${APP_IMAGE_VAL##*:}"
+  ok "镜像已更新: ${APP_IMAGE_VAL:-默认}"
+  [ -n "$SAAS_SERVICE_IMAGE_VAL" ] && ok "          ${SAAS_SERVICE_IMAGE_VAL}"
+  [ -n "$POLICY_SERVICE_IMAGE_VAL" ] && ok "          ${POLICY_SERVICE_IMAGE_VAL}"
+  [ -n "$AI_GATEWAY_IMAGE_VAL" ] && ok "          ${AI_GATEWAY_IMAGE_VAL}"
+  [ -n "$LOGS_COLLECTOR_IMAGE_VAL" ] && ok "          ${LOGS_COLLECTOR_IMAGE_VAL}"
+}
+
 # ─── 生成所有环境变量文件 ──────────────────────────────────────────────────
 generate_config() {
   info "生成随机密码和密钥..."
@@ -446,6 +509,7 @@ main() {
   check_prereqs
   generate_config
   collect_license
+  fetch_latest_tags
   start_services
   init_databases
 
