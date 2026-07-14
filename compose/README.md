@@ -39,7 +39,6 @@
 
 ### 1.4 部署依赖
 
-
 | 依赖 | 版本要求 | 说明 |
 | --- | --- | --- |
 | Docker | `≥ 24.x` | 容器运行时，需包含 Compose plugin，支持 `docker compose` 命令 |
@@ -83,6 +82,7 @@
 - [ ] 已安装 Docker，版本满足要求
 - [ ] `docker compose` 命令可正常执行
 - [ ] 已准备访问域名，或已规划三个外部访问端口
+
 
 ## 3. 独立部署流程
 
@@ -299,6 +299,24 @@ vim <项目目录>/.env
 ```
 
 仅修改当前部署需求涉及的配置项，并按照配置文件中的注释确认变量用途和填写方式。
+
+#### 单点登录 (saas-service.env)
+google 单点登录配置
+```
+# 注意回调地址填写：{API_BASE_URL}/api/v1/auth/oauth/google/callback
+OAUTH_GOOGLE_CLIENT_ID=
+OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET}
+```
+
+github 单点登录配置
+```
+# 注意回调地址填写： {API_BASE_URL}/auth/callback/github
+
+OAUTH_GITHUB_CLIENT_ID=
+OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET}
+OAUTH_GITHUB_ALLOWED_REDIRECT_URIS=http://localhost:8081/auth/github/callback
+
+```
 
 #### 操作结果
 
@@ -642,4 +660,8 @@ docker ps -a
 - [ ] 统计数据和日志记录正常
 
 
+## 6. 联系方式
 
+- X：<https://x.com/alephantai>
+- Discord：<https://discord.com/invite/tRQghcXhaH>
+- Wechat: hong3yang
