@@ -11,7 +11,7 @@ app:
   name: alephant-app
   image:
     repository: alephant-app
-    tag: "20260713084819"
+    tag: "20260713224933"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
@@ -34,7 +34,7 @@ saasService:
   name: alephant-saas-service
   image:
     repository: alephant-saas-service
-    tag: "20260712195945"
+    tag: "20260713225022"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
@@ -77,7 +77,7 @@ policyService:
   name: alephant-policy-service
   image:
     repository: alephant-policy-service
-    tag: "20260712195949"
+    tag: "20260713224812"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
@@ -104,7 +104,7 @@ aiGateway:
   name: alephant-ai-gateway
   image:
     repository: alephant-ai-gateway
-    tag: "20260712194908"
+    tag: "20260713224915"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
@@ -125,7 +125,7 @@ logsCollector:
   name: alephant-logs-collector
   image:
     repository: alephant-logs-collector
-    tag: "20260712195944"
+    tag: "20260713225050"
   # tolerations:
   #   - key: dedicated
   #     operator: Equal
