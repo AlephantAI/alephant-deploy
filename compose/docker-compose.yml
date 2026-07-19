@@ -273,7 +273,7 @@ services:
       - policy-service
       - ai-gateway
       - logs-collector
-    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260713171710}
+    image: ${APP_IMAGE:-registry.openmodels.link/alephant/alephant-app:20260717170053}
     container_name: alephant-app
     restart: unless-stopped
     networks:
@@ -287,7 +287,7 @@ services:
   # ---------------------------------------------------------------------------
   saas-service:
     platform: linux/amd64
-    image: ${SAAS_SERVICE_IMAGE:-registry.openmodels.link/alephant/alephant-saas-service:20260712195945}
+    image: ${SAAS_SERVICE_IMAGE:-registry.openmodels.link/alephant/alephant-saas-service:20260717191103}
     container_name: alephant-saas-service
     restart: unless-stopped
     networks:
@@ -305,7 +305,7 @@ services:
   # ---------------------------------------------------------------------------
   policy-service:
     platform: linux/amd64
-    image: ${POLICY_SERVICE_IMAGE:-registry.openmodels.link/alephant/alephant-policy-service:20260712195949}
+    image: ${POLICY_SERVICE_IMAGE:-registry.openmodels.link/alephant/alephant-policy-service:20260717170055}
     container_name: alephant-policy-service
     restart: unless-stopped
     networks:
@@ -322,7 +322,7 @@ services:
       - pd
       - tikv
       - minio
-    image: ${AI_GATEWAY_IMAGE:-registry.openmodels.link/alephant/alephant-ai-gateway:20260712194908}
+    image: ${AI_GATEWAY_IMAGE:-registry.openmodels.link/alephant/alephant-ai-gateway:20260717180330}
     container_name: alephant-ai-gateway
     restart: unless-stopped
     networks:
@@ -335,7 +335,7 @@ services:
   # ---------------------------------------------------------------------------
   logs-collector:
     platform: linux/amd64
-    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260713184843}
+    image: ${LOGS_COLLECTOR_IMAGE:-registry.openmodels.link/alephant/alephant-logs-collector:20260717233247}
     container_name: alephant-logs-collector
     restart: unless-stopped
     networks:
