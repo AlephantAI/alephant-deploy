@@ -28,7 +28,7 @@
 | --- | --- |
 | 操作系统 | Linux（推荐 Ubuntu 22.04+ / Debian 12+）或 macOS |
 | CPU | ≥ 4 核 |
-| 内存 | ≥ 12 GB，满足 12 个服务合计运行需求 |
+| 内存 | ≥ 12 GB，满足 13 个服务合计运行需求 |
 | 磁盘空间 | ≥ 50 GB 可用空间，包含业务镜像约 2 GB 及各中间件数据卷 |
 | 网络 | 能够访问业务镜像下载地址和 Docker Hub |
 
@@ -36,7 +36,27 @@
 
 - 中间件镜像来源：Docker Hub（`docker.io`）
 
-### 1.4 部署依赖
+### 1.4 服务组成
+
+Docker Compose 会启动 13 个服务，所有服务默认加入 `alephant-net` 内部网络。除 `gateway` 统一暴露外，其他服务主要通过容器内部网络互相访问。
+
+| 服务 | 容器名 | 具体作用 | 访问方式或依赖关系 |
+| --- | --- | --- | --- |
+| `postgres` | `alephant-postgres` | PostgreSQL 关系型数据库，用于保存 Alephant 核心业务数据。数据持久化到 `postgres-data` 卷。 | 内部服务访问，凭证来自 `infra.env` |
+| `clickhouse` | `alephant-clickhouse` | ClickHouse OLAP 数据库，用于承载统计、分析类数据的高性能查询。数据持久化到 `clickhouse-data` 卷，并加载 `config/clickhouse/config.d` 配置。 | 内部服务访问，HTTP 和 TCP 端口默认不对外暴露 |
+| `valkey` | `alephant-valkey` | Valkey/Redis 兼容缓存服务，用于提供缓存、临时状态或队列类基础能力。数据持久化到 `valkey-data` 卷。 | 内部服务访问，密码来自 `VALKEY_PASSWORD` |
+| `qdrant` | `alephant-qdrant` | Qdrant 单节点向量数据库，用于保存和检索向量数据。数据持久化到 `qdrant-storage` 卷。 | 内部服务访问，API Key 来自 `QDRANT_API_KEY` |
+| `pd` | `alephant-pd` | TiKV Placement Driver，负责 TiKV 集群元数据、调度和服务发现。 | 内部服务访问，`tikv` 依赖其健康状态 |
+| `tikv` | `alephant-tikv` | TiKV 分布式 KV 存储节点，为需要 KV 存储能力的业务组件提供底层存储。 | 依赖 `pd`，供 `ai-gateway` 等内部服务使用 |
+| `minio` | `alephant-minio` | S3 兼容对象存储，用于保存文件、对象或运行过程中产生的存储对象。数据持久化到 `minio-data` 卷。 | 内部服务访问，供 `ai-gateway` 等内部服务使用 |
+| `saas-app` | `alephant-app` | Alephant Web 前端，同时包含容器内置 Nginx 模板，用于承载 SPA 页面并转发前端相关 API 请求。 | 不直接暴露端口，由 `gateway` 的 80 端口统一代理 |
+| `saas-service` | `alephant-saas-service` | Alephant SaaS 核心业务后端，处理前端业务 API，并读取 `license.jwt` 完成授权相关配置。 | 内部服务访问，`gateway` 通过 `/api/v1` 代理到该服务 |
+| `policy-service` | `alephant-policy-service` | 策略后端服务，用于提供 Policy 相关接口和策略能力。 | 内部服务访问，`gateway` 通过 `/v1/policy` 代理到该服务 |
+| `ai-gateway` | `alephant-ai-gateway` | AI Gateway 服务，用于接收和转发大模型调用请求，并使用 TiKV、PD、MinIO 等基础服务。 | 依赖 `pd`、`tikv`、`minio`，由 `gateway` 的 81 端口代理 `/v1/` |
+| `logs-collector` | `alephant-logs-collector` | 日志和分析数据采集服务，用于接收前端或网关产生的埋点、日志和统计数据。 | 内部服务访问，由 `gateway` 的 82 端口代理 `/analytics/` 和 `/v1` |
+| `gateway` | `alephant-gateway` | 统一接入网关，基于 Nginx 将外部请求转发到前端、SaaS 后端、Policy 服务、AI Gateway 和 Logs Collector。 | 对外暴露 80、81、82 端口，配置文件为 `config/nginx/nginx.conf` |
+
+### 1.5 部署依赖
 
 | 依赖 | 版本要求 | 说明 |
 | --- | --- | --- |
@@ -204,6 +224,7 @@ docker ps -a
 - 镜像下载提示无权限，请确认是否执行随jwt授权文件提供的登录命令
 - 镜像下载失败，请检查网络确认网络正常后重试
 
+
 ### 3.4 步骤 4：配置自定义前端 API 地址
 
 #### 操作目的
@@ -289,7 +310,7 @@ vim <项目目录>/.env
 
 仅修改当前部署需求涉及的配置项，并按照配置文件中的注释确认变量用途和填写方式。
 
-#### 单点登录 (saas-service.env)
+#### 1、单点登录 (saas-service.env)
 google 单点登录配置
 ```
 # 注意回调地址填写：{API_BASE_URL}/api/v1/auth/oauth/google/callback
@@ -306,6 +327,24 @@ OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET}
 OAUTH_GITHUB_ALLOWED_REDIRECT_URIS=http://localhost:8081/auth/github/callback
 
 ```
+
+#### 2、日志排查（ai-gateway.env）
+- 访问日志排查：如需临时查看 AI Gateway 的请求头或请求体日志，可在 `compose/ai-gateway.env` 中增加以下配置，然后重新创建或重启 `ai-gateway` 容器使配置生效：
+
+```dotenv
+# 打印请求头
+AI_GATEWAY_DEBUG_HEADERS=true
+# 打印请求体
+AI_GATEWAY_DEBUG_BODY=true
+```
+
+配置生效后，可通过以下命令实时查看容器日志：
+
+```bash
+docker logs -f alephant-ai-gateway
+```
+
+生产环境建议关闭上述日志配置，避免输出敏感请求信息并增加日志量。
 
 #### 操作结果
 
