@@ -223,22 +223,7 @@ docker ps -a
 
 - 镜像下载提示无权限，请确认是否执行随jwt授权文件提供的登录命令
 - 镜像下载失败，请检查网络确认网络正常后重试
-- 访问日志排查：如需临时查看 AI Gateway 的请求头或请求体日志，可在 `compose/ai-gateway.env` 中增加以下配置，然后重新创建或重启 `ai-gateway` 容器使配置生效：
 
-```dotenv
-# 打印请求头
-AI_GATEWAY_DEBUG_HEADERS=true
-# 打印请求体
-AI_GATEWAY_DEBUG_BODY=true
-```
-
-配置生效后，可通过以下命令实时查看容器日志：
-
-```bash
-docker logs -f alephant-ai-gateway
-```
-
-生产环境建议关闭上述日志配置，避免输出敏感请求信息并增加日志量。
 
 ### 3.4 步骤 4：配置自定义前端 API 地址
 
@@ -325,7 +310,7 @@ vim <项目目录>/.env
 
 仅修改当前部署需求涉及的配置项，并按照配置文件中的注释确认变量用途和填写方式。
 
-#### 单点登录 (saas-service.env)
+#### 1、单点登录 (saas-service.env)
 google 单点登录配置
 ```
 # 注意回调地址填写：{API_BASE_URL}/api/v1/auth/oauth/google/callback
@@ -342,6 +327,24 @@ OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET}
 OAUTH_GITHUB_ALLOWED_REDIRECT_URIS=http://localhost:8081/auth/github/callback
 
 ```
+
+#### 2、日志排查（ai-gateway.env）
+- 访问日志排查：如需临时查看 AI Gateway 的请求头或请求体日志，可在 `compose/ai-gateway.env` 中增加以下配置，然后重新创建或重启 `ai-gateway` 容器使配置生效：
+
+```dotenv
+# 打印请求头
+AI_GATEWAY_DEBUG_HEADERS=true
+# 打印请求体
+AI_GATEWAY_DEBUG_BODY=true
+```
+
+配置生效后，可通过以下命令实时查看容器日志：
+
+```bash
+docker logs -f alephant-ai-gateway
+```
+
+生产环境建议关闭上述日志配置，避免输出敏感请求信息并增加日志量。
 
 #### 操作结果
 
